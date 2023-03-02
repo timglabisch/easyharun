@@ -16,7 +16,7 @@ pub async fn build_world_from_config() -> Result<World, ::anyhow::Error> {
         }
     }
 
-    Ok(World::new(containers))
+    Ok(World::new(containers, "config"))
 }
 
 pub fn build_world_container_from_config_container(config_container : &ConfigContainer) -> WorldContainer {

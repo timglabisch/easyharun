@@ -38,7 +38,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
         };
     }
 
-    Ok(World::new(world_containers))
+    Ok(World::new(world_containers, "docker"))
 }
 
 fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
@@ -81,6 +81,7 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
 
     Ok(Some(
         WorldContainer {
+            internal_id: None,
             id: Some(container_id),
             image: container_image,
             name: container_name,
