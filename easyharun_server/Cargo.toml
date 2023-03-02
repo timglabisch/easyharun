@@ -1,0 +1,13 @@
+[package]
+name = "easyharun_server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+easyharun_lib = {path = "./../easyharun_lib"}
+tokio = {version = "1.*", features=["full"]}
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "*"
+structopt = { version = "0.3", features = [ "default" ] }
+lazy_static = "1.*"

@@ -1,0 +1,13 @@
+[[service]]
+name = "http"
+port = 80
+target = "nginx_port"
+
+[[container]]
+name = "nginx"
+version = "latest"
+image = "nginx:{{version}}"
+replicas = 1
+container_port = 81
+target_port = "nginx_port"
+health_check_cmd = "curl 127.0.0.1:81"
