@@ -16,9 +16,7 @@ pub async fn build_world_from_config() -> Result<World, ::anyhow::Error> {
         }
     }
 
-    Ok(World {
-        containers,
-    })
+    Ok(World::new(containers))
 }
 
 pub fn build_world_container_from_config_container(config_container : &ConfigContainer) -> WorldContainer {
@@ -27,5 +25,6 @@ pub fn build_world_container_from_config_container(config_container : &ConfigCon
         version: config_container.version.clone(),
         image: config_container.image.clone(),
         name: config_container.name.clone(),
+        internal_id: None,
     }
 }

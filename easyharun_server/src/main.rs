@@ -1,6 +1,7 @@
 mod container_manager;
 mod config;
 mod docker;
+mod brain;
 
 use structopt::StructOpt;
 

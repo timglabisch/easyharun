@@ -38,9 +38,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
         };
     }
 
-    Ok(World {
-        containers: world_containers
-    })
+    Ok(World::new(world_containers))
 }
 
 fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
