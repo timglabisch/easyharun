@@ -3,26 +3,26 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-    service: Vec<ConfigService>,
-    container: Vec<ConfigContainer>,
+    pub service: Vec<ConfigService>,
+    pub container: Vec<ConfigContainer>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigService {
-    name: String,
-    port: u64,
-    target: String,
+    pub name: String,
+    pub port: u64,
+    pub target: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigContainer {
-    name: String,
-    version: String,
-    image: String,
-    replicas: String,
-    container_port: String,
-    target_port: String,
-    health_check_cmd: Option<String>,
+    pub name: String,
+    pub version: String,
+    pub image: String,
+    pub replicas: u32,
+    pub container_port: String,
+    pub target_port: String,
+    pub health_check_cmd: Option<String>,
 }
 
 impl Config {

@@ -1,5 +1,5 @@
 mod container_manager;
-mod config_provider;
+mod config;
 mod docker;
 
 use structopt::StructOpt;
