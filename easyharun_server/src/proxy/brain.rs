@@ -31,7 +31,7 @@ impl ProxyBrain {
         let mut buf = vec![];
 
         for (_, proxy_current) in worlds.current.proxies.iter() {
-            for proxy_current_addr in proxy_current.server_addrs {
+            for proxy_current_addr in proxy_current.server_addrs.iter() {
 
                 let existing_proxy = match worlds.expected.proxies.get(&proxy_current.listen_addr) {
                     None => {
@@ -64,7 +64,7 @@ impl ProxyBrain {
         let mut buf = vec![];
 
         for (_, proxy_expected) in worlds.expected.proxies.iter() {
-            for proxy_expected_addr in proxy_expected.server_addrs {
+            for proxy_expected_addr in proxy_expected.server_addrs.iter() {
                 let existing_proxy = match worlds.current.proxies.get(&proxy_expected.listen_addr) {
                     None => {
                         // entire proxy does not exist
