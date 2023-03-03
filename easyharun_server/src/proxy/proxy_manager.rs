@@ -7,6 +7,7 @@ use bollard::models::PortMap;
 use easyharun_lib::portmapping::PortMappingParser;
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
+use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
 pub struct ManagedProxy {
@@ -91,12 +92,69 @@ impl ProxyManager {
         })
     }
 
-    pub async fn run(&mut self) -> Result<(), ::anyhow::Error> {
+    pub async fn run(&mut self) {
+        loop {
+            match self.run_inner().await {
+                Ok(_) => {},
+                Err(e) => {
+                    eprintln!("Proxy Manager Error: \n{:?}\n\n", e)
+                }
+            };
+
+            ::tokio::time::sleep(::tokio::time::Duration::from_millis(200)).await;
+        }
+    }
+
+    pub async fn run_inner(&mut self) -> Result<(), ::anyhow::Error> {
         let worlds = ProxyWorlds {
             current: self.create_proxy_world_current(),
             expected: Self::create_proxy_world_expected().await?
         };
 
+        let actions = ProxyBrain::think(&worlds);
+
+        match self.execute_brain_actions(&actions).await {
+            Ok(_) => {},
+            Err(_) => {
+                eprintln!("failed to execute brain actions.");
+            }
+        };
+
+        Ok(())
+    }
+
+    async fn execute_brain_actions(&mut self, actions: &Vec<ProxyBrainAction>) -> Result<(), Vec<::anyhow::Error>> {
+        let mut errors = vec![];
+
+        for action in actions.iter() {
+            match self.execute_brain_action(action).await {
+                Ok(_) => {},
+                Err(e) => {
+                    eprintln!("failed to execute brain action {:?}:{:?}\n", &action, e);
+                    errors.push(e);
+                }
+            }
+        }
+
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(())
+    }
+
+    async fn execute_brain_action(&mut self, action: &ProxyBrainAction) -> Result<(), ::anyhow::Error> {
+        Ok(match action {
+            ProxyBrainAction::Add(a) => self.execute_brain_actions_add(a).await?,
+            ProxyBrainAction::RemoveAsk(a) => self.execute_brain_actions_remove_ask(a).await?,
+        })
+    }
+
+    pub async fn execute_brain_actions_add(&mut self, action : &ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
+        Ok(())
+    }
+
+    pub async fn execute_brain_actions_remove_ask(&mut self, action : &ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
         Ok(())
     }
 }

@@ -2,17 +2,20 @@ use crate::proxy::world::{ProxyWorldEntry, ProxyWorlds};
 
 pub struct ProxyBrain;
 
+#[derive(Debug, Clone)]
 pub enum ProxyBrainAction {
     Add(ProxyBrainActionAdd),
     RemoveAsk(ProxyBrainActionRemove),
 }
 
-struct ProxyBrainActionAdd {
+#[derive(Debug, Clone)]
+pub struct ProxyBrainActionAdd {
     pub listen_addr: String,
     pub server_addr: String,
 }
 
-struct ProxyBrainActionRemove {
+#[derive(Debug, Clone)]
+pub struct ProxyBrainActionRemove {
     pub listen_addr: String,
     pub server_addr: String,
 }
@@ -23,6 +26,7 @@ impl ProxyBrain {
         let mut buf = vec![];
 
         buf.extend(Self::think_about_adding_proxies(worlds));
+        buf.extend(Self::think_about_removing_proxies(worlds));
 
         return buf;
     }
