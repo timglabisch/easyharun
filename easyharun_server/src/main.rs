@@ -3,6 +3,7 @@ mod config;
 mod docker;
 mod brain;
 mod kv_container;
+mod proxy;
 
 use structopt::StructOpt;
 
