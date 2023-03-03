@@ -5,7 +5,7 @@ use std::error::Error;
 use futures::FutureExt;
 
 
-struct TcpProxy;
+pub struct TcpProxy;
 
 impl TcpProxy {
     pub async fn run(

@@ -15,6 +15,19 @@ pub struct ManagedProxy {
     server_addrs: Vec<String>,
 }
 
+impl ManagedProxy {
+    pub fn new_spawn(
+        listen_addr: String,
+        server_addrs: Vec<String>
+    ) -> Self {
+        // todo, spawn tcp proxy.
+        ManagedProxy {
+            listen_addr,
+            server_addrs
+        }
+    }
+}
+
 pub struct ProxyManager {
     proxies: HashMap<String, ManagedProxy>
 }
@@ -151,10 +164,21 @@ impl ProxyManager {
     }
 
     pub async fn execute_brain_actions_add(&mut self, action : &ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
+
+        self.proxies.get_mut(&action.listen_addr).unwrap_or_else(|x| {
+            ManagedProxy {
+                listen_addr: action.listen_addr.clone(),
+                server_addrs: vec![action.server_addr.clone()],
+            }
+        })
+
         Ok(())
     }
 
     pub async fn execute_brain_actions_remove_ask(&mut self, action : &ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
+
+
+
         Ok(())
     }
 }
