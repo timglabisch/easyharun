@@ -6,12 +6,13 @@ use bollard::Docker;
 use bollard::models::ContainerSummary;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use crate::container_manager::world::{World, WorldContainer};
+use crate::docker::docker_connection::docker_create_connection;
 
 
 pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     trace!("starting to check the docker world");
 
-    let docker = Docker::connect_with_socket_defaults().context("could not connect docker.")?;
+    let docker = docker_create_connection()?;
 
     let mut filters = HashMap::new();
     filters.insert("label", vec!["easyharun=\"1.0.0\""]);

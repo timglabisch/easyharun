@@ -21,7 +21,7 @@ impl Brain {
         Ok(BrainAction::NoOp)
     }
 
-    pub fn think_about_starting_new_containers(world_diff : &WorldDiff) -> Result<Option<BrainAction>, ::anyhow::Error> {
+    fn think_about_starting_new_containers(world_diff : &WorldDiff) -> Result<Option<BrainAction>, ::anyhow::Error> {
         match world_diff.containers_does_not_exists_but_should_exists().first() {
             None => Ok(None),
             Some(s) => Ok(Some(BrainAction::ContainersStart(vec![
@@ -30,7 +30,7 @@ impl Brain {
         }
     }
 
-    pub fn think_about_stopping_existing_containers(world_diff : &WorldDiff) -> Result<Option<BrainAction>, ::anyhow::Error> {
+    fn think_about_stopping_existing_containers(world_diff : &WorldDiff) -> Result<Option<BrainAction>, ::anyhow::Error> {
         match world_diff.containers_exists_but_should_not_exists().first() {
             None => Ok(None),
             Some(s) => Ok(Some(BrainAction::ContainersStop(vec![
