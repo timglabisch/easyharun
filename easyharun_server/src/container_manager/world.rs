@@ -37,7 +37,7 @@ impl Worlds {
                     continue;
                 }
 
-                if (Self::container_statisfies_container(current_container, expected_container)) {
+                if Self::container_statisfies_container(current_container, expected_container) {
                     ids.insert(current_container.get_internal_id());
                     ids.insert(expected_container.get_internal_id());
                 }
