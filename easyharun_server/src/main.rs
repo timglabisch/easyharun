@@ -2,6 +2,7 @@ mod container_manager;
 mod config;
 mod docker;
 mod brain;
+mod kv_container;
 
 use structopt::StructOpt;
 

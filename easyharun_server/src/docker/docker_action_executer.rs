@@ -4,6 +4,7 @@ use bollard::Docker;
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
+use crate::kv_container::KV;
 
 struct DockerActionExecuter;
 
@@ -63,19 +64,15 @@ impl DockerActionExecuter {
         let docker = docker_create_connection()?;
 
         for container_stop in action.iter() {
-            Self::execute_container_stop(&docker, container_stop).await?
+            Self::execute_container_stop(container_stop).await?
         }
 
         Ok(())
     }
 
-    async fn execute_container_stop(docker: &Docker, container: &ContainerStop) -> Result<(), ::anyhow::Error> {
+    async fn execute_container_stop(container: &ContainerStop) -> Result<(), ::anyhow::Error> {
 
-        docker.
-
-        docker.update_container(&container.id, UpdateContainerOptions {
-            ..Default::default()
-        });
+        KV::mark_container_to_be_deleted(&container.id);
 
         Ok(())
     }
