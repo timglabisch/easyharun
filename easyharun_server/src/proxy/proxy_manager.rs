@@ -79,7 +79,7 @@ impl ProxyManager {
                     Vacant(o) => {
                         o.insert(ProxyWorldEntry {
                             listen_addr: portmapping.listen_addr.clone(),
-                            server_addrs: vec![portmapping.server_addr.clone()]
+                            server_addrs: portmapping.server_addr.clone()
                         });
                     },
                 };
