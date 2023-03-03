@@ -25,7 +25,7 @@ impl Brain {
         match world_diff.containers_does_not_exists_but_should_exists().first() {
             None => Ok(None),
             Some(s) => Ok(Some(BrainAction::ContainersStart(vec![
-                ContainerStart::from_world_container(s)
+                ContainerStart::new_from_world_container(s)
             ])))
         }
     }
@@ -34,7 +34,7 @@ impl Brain {
         match world_diff.containers_exists_but_should_not_exists().first() {
             None => Ok(None),
             Some(s) => Ok(Some(BrainAction::ContainersStop(vec![
-                ContainerStop::from_world_container(s)
+                ContainerStop::new_from_world_container(s)?
             ])))
         }
     }

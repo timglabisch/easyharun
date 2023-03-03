@@ -27,13 +27,13 @@ impl Worlds {
         let mut ids = HashSet::new();
         for current_container in self.current.containers.iter() {
 
-            if ids.contains(current_container.get_internal_id()) {
+            if ids.contains(&current_container.get_internal_id()) {
                 continue;
             }
 
             for expected_container in self.expected.containers.iter() {
 
-                if ids.contains(expected_container.get_internal_id()) {
+                if ids.contains(&expected_container.get_internal_id()) {
                     continue;
                 }
 
@@ -46,7 +46,7 @@ impl Worlds {
 
         let mut containers_exists_but_should_not_exists = vec![];
         for current_container in self.current.containers.iter() {
-            if ids.contains(current_container.get_internal_id()) {
+            if ids.contains(&current_container.get_internal_id()) {
                 continue;
             }
 
@@ -55,7 +55,7 @@ impl Worlds {
 
         let mut containers_does_not_exists_but_should_exists = vec![];
         for expected_container in self.expected.containers.iter() {
-            if ids.contains(expected_container.get_internal_id()) {
+            if ids.contains(&expected_container.get_internal_id()) {
                 continue;
             }
 
@@ -90,7 +90,7 @@ impl World {
     pub fn new(containers: Vec<WorldContainer>, unique_world_name: &str) -> Self {
 
         let containers = containers.into_iter().enumerate().map(|(id, mut world_container)| {
-            world_container.internal_id = Some(format!("{}_{}", unique_world_name, i));
+            world_container.internal_id = Some(format!("{}_{}", unique_world_name, id));
             world_container
         }).collect();
 
@@ -114,7 +114,7 @@ pub struct WorldContainer {
 }
 
 impl WorldContainer {
-    pub fn get_internal_id(&self) -> &str {
-        self.internal_id.expect("internal id must be given ...").as_str()
+    pub fn get_internal_id(&self) -> String {
+        self.internal_id.as_ref().expect("internal id must be given ...").as_str().to_string()
     }
 }
