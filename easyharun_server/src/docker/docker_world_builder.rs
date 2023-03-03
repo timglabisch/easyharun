@@ -7,6 +7,7 @@ use bollard::models::ContainerSummary;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use crate::container_manager::world::{World, WorldContainer};
 use crate::docker::docker_connection::docker_create_connection;
+use crate::kv_container::KV;
 
 
 pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
@@ -26,6 +27,17 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 
     let mut world_containers = vec![];
     for container in containers.iter() {
+
+        match &container.id {
+            None => {},
+            Some(id) => {
+                // ignore containers that are marked to be deleted.
+                if KV::is_container_marked_to_be_deleted(id.as_str()) {
+                    continue;
+                }
+            }
+        };
+
         match build_world_container(container) {
             Err(e) => {
                 warn!("error while scanning container {:?}. error: {:#?}", container.id, e);
@@ -48,7 +60,6 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
     debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
 
     let mut container_name = None;
-    let mut container_version = None;
 
     let container_id = match container_summary.id.clone() {
         Some(s) => s,
@@ -63,7 +74,6 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
     for entry in labels.iter() {
         match &entry.0[..] {
             "easyharun_name" => container_name = Some(entry.1.clone()),
-            "easyharun_version" => container_version = Some(entry.1.clone()),
             _ => {
                 continue;
             }
@@ -75,10 +85,6 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         None => return Err(anyhow!("container {} has no container_name", container_id))
     };
 
-    let container_version = match container_version {
-        Some(s) => s,
-        None => return Err(anyhow!("container {} has no container_version", container_id))
-    };
 
     Ok(Some(
         WorldContainer {
@@ -86,7 +92,6 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
             id: Some(container_id),
             image: container_image,
             name: container_name,
-            version: container_version,
         }
     ))
 }

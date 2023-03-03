@@ -17,7 +17,6 @@ pub struct ConfigService {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigContainer {
     pub name: String,
-    pub version: String,
     pub image: String,
     pub replicas: u32,
     pub container_port: String,

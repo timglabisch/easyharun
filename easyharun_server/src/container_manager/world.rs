@@ -110,7 +110,6 @@ pub struct WorldContainer {
     pub id: Option<String>,
     pub name: String,
     pub image: String,
-    pub version: String,
 }
 
 impl WorldContainer {
