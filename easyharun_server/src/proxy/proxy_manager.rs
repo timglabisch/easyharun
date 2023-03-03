@@ -6,6 +6,7 @@ use bollard::container::ListContainersOptions;
 use bollard::models::PortMap;
 use easyharun_lib::portmapping::PortMappingParser;
 use crate::docker::docker_connection::docker_create_connection;
+use crate::kv_container::KV;
 use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
 pub struct ManagedProxy {
@@ -52,6 +53,11 @@ impl ProxyManager {
         let mut proxies : HashMap<String, ProxyWorldEntry> = HashMap::new();
 
         for container in containers.iter() {
+
+            if KV::is_container_marked_to_be_deleted(&container.id.as_ref().unwrap_or(&"no-id".to_string())) {
+                continue;
+            }
+
             let labels = match &container.labels {
                 Some(s) => s,
                 None => continue,
