@@ -8,24 +8,33 @@ lazy_static! {
 }
 
 #[derive(Eq, PartialEq)]
-pub enum ContainerState {
-    Running,
-    ToBeDeleted,
+pub struct ContainerState {
+    should_be_deleted: bool,
+}
+
+impl ContainerState {
+    pub fn new_default() -> Self {
+        Self {
+            should_be_deleted: false,
+        }
+    }
 }
 
 pub struct KV;
 
 impl KV {
-    pub fn update_container_state(container_id: &str, container_state : ContainerState) {
-        _KV.write().expect("kv write").insert(container_id.to_string(), container_state);
-    }
 
     pub fn mark_container_to_be_deleted(container_id: &str) {
-        Self::update_container_state(container_id, ContainerState::ToBeDeleted);
+        _KV.write().expect("kv write").entry(container_id.to_string()).or_insert(ContainerState::new_default()).should_be_deleted = true;
     }
 
     pub fn is_container_marked_to_be_deleted(container_id: &str) -> bool {
-        _KV.read().expect("could not read kv").get(container_id) == Some(&ContainerState::ToBeDeleted)
+        let read = _KV.read().expect("could not read kv");
+
+        match read.get(container_id) {
+            Some(s) if s.should_be_deleted == true => true,
+            _ => false,
+        }
     }
 }
 
