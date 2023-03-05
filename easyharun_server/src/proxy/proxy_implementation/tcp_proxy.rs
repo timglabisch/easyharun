@@ -2,28 +2,64 @@ use tokio::io;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use std::error::Error;
+use anyhow::{anyhow, Context};
 use futures::FutureExt;
 
 
-pub struct TcpProxy;
+pub struct TcpProxy {
+    listen_addr: String,
+    server_addrs: Vec<String>,
+    stats_requests_all: u64,
+}
 
 impl TcpProxy {
-    pub async fn run(
-        listen_addr: String,
-        server_addrs: Vec<String>,
-    ) -> Result<(), ::anyhow::Error> {
 
-        let listener = TcpListener::bind(listen_addr).await?;
+    pub fn new(
+        listen_addr: String
+    ) -> Self {
+        Self {
+            listen_addr,
+            server_addrs: vec![],
+            stats_requests_all: 0,
+        }
+    }
+
+    pub async fn run(mut self) -> Result<(), ::anyhow::Error> {
+
+        let listener = TcpListener::bind(&self.listen_addr).await?;
 
         while let Ok((inbound, _)) = listener.accept().await {
-            let transfer = Self::transfer(inbound, server_addrs[0].clone()).map(|r| {
-                if let Err(e) = r {
-                    println!("Failed to transfer; error={}", e);
+            match self.handle_accept(inbound) {
+                Ok(()) => {},
+                Err(e) => {
+                    eprintln!("tcp proxy error: {:?}", e)
                 }
-            });
-
-            tokio::spawn(transfer);
+            }
         }
+
+        Ok(())
+    }
+
+    fn pick_server(&self) -> Result<String, ::anyhow::Error> {
+        let server_addrs_len = self.server_addrs.len() as u64;
+
+        if server_addrs_len == 0 {
+            return Err(anyhow!("no backend server..."));
+        }
+
+        Ok(self.server_addrs[(server_addrs_len % self.stats_requests_all) as usize].to_string())
+    }
+
+    fn handle_accept(&mut self, inbound : TcpStream) -> Result<(), ::anyhow::Error> {
+        let backend_server_addr = self.pick_server().context("could not pick a backend server")?;
+
+        let transfer = Self::transfer(inbound, backend_server_addr).map(|r| {
+            if let Err(e) = r {
+                println!("Failed to transfer; error={}", e);
+            }
+        });
+
+        tokio::spawn(transfer);
 
         Ok(())
     }

@@ -8,28 +8,13 @@ use easyharun_lib::portmapping::PortMappingParser;
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
+use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
+use crate::proxy::proxy_implementation::tcp_proxy::TcpProxy;
 use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
-pub struct ManagedProxy {
-    listen_addr: String,
-    server_addrs: Vec<String>,
-}
-
-impl ManagedProxy {
-    pub fn new_spawn(
-        listen_addr: String,
-        server_addrs: Vec<String>
-    ) -> Self {
-        // todo, spawn tcp proxy.
-        ManagedProxy {
-            listen_addr,
-            server_addrs
-        }
-    }
-}
 
 pub struct ProxyManager {
-    proxies: HashMap<String, ManagedProxy>
+    proxies: HashMap<String, ProxyHandle>
 }
 
 impl ProxyManager {
@@ -166,9 +151,13 @@ impl ProxyManager {
     pub async fn execute_brain_actions_add(&mut self, action : &ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
 
         self.proxies.get_mut(&action.listen_addr).unwrap_or_else(|x| {
-            ManagedProxy {
+
+            let proxy = ::tokio::spawn(async move {
+                TcpProxy::new().run()
+            })
+
+            ProxyHandle {
                 listen_addr: action.listen_addr.clone(),
-                server_addrs: vec![action.server_addr.clone()],
             }
         })
 
