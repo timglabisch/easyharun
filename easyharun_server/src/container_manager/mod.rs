@@ -1,5 +1,5 @@
 use anyhow::Context;
-use tracing::{debug, trace, warn};
+use tracing::{debug, info, trace, warn};
 use crate::brain::brain::Brain;
 use crate::config::config_world_builder::build_world_from_config;
 use crate::container_manager::world::Worlds;
@@ -31,7 +31,7 @@ impl ContainerManager {
             };
 
             trace!("sleep");
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(100)).await;
+            ::tokio::time::sleep(::tokio::time::Duration::from_millis(500)).await;
             trace!("/sleep");
         }
 
@@ -44,7 +44,7 @@ impl ContainerManager {
             current: build_world_from_docker().await.context("could not build world from docker")?
         };
 
-        debug!("created worlds");
+        info!("created worlds");
 
         let next_action = Brain::think_about_next_action(&worlds).context("brain error, could not resolve brain action.")?;
 

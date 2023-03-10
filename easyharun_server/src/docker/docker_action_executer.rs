@@ -3,7 +3,7 @@ use anyhow::Context;
 use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::Docker;
 use bollard::image::CreateImageOptions;
-use tracing::debug;
+use tracing::{debug, info};
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
@@ -33,7 +33,7 @@ impl DockerActionExecuter {
     }
 
     async fn execute_container_start(docker: &Docker, container: &ContainerStart) -> Result<(), ::anyhow::Error> {
-        debug!("execute_containers_start");
+        info!("execute_containers_start");
 
         let options = CreateImageOptions{
             from_image: container.image.clone(),
@@ -43,9 +43,9 @@ impl DockerActionExecuter {
         let mut create_image = docker.create_image(Some(options), None, None);
 
         while let Some(v) = create_image.next().await {
-            debug!("getting image ...");
+            info!("getting image ...");
         }
-        debug!("got image ...");
+        info!("got image ...");
 
 
         let name = Uuid::new_v4();
@@ -53,6 +53,7 @@ impl DockerActionExecuter {
         let labels = {
             let mut buf = HashMap::new();
             buf.insert("easyharun_name".to_string(), container.name.to_string());
+            buf.insert("easyharun".to_string(), "1.0.0".to_string());
             buf
         };
 
@@ -92,7 +93,7 @@ impl DockerActionExecuter {
 
     async fn execute_container_stop(container: &ContainerStop) -> Result<(), ::anyhow::Error> {
 
-        debug!("execute_containers_start");
+        info!("execute_containers_start");
         KV::mark_container_to_be_deleted(&container.id);
 
         Ok(())

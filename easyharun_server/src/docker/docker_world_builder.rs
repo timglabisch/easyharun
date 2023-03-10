@@ -16,7 +16,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     let docker = docker_create_connection()?;
 
     let mut filters = HashMap::new();
-    filters.insert("label", vec!["easyharun=\"1.0.0\""]);
+    filters.insert("label", vec!["easyharun=1.0.0"]);
 
     let containers = docker.list_containers(Some(ListContainersOptions {
         all: true,
@@ -27,6 +27,24 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 
     let mut world_containers = vec![];
     for container in containers.iter() {
+
+        let container_state = match &container.state {
+            Some(s) => s,
+            None => {
+                warn!("got a container without state");
+                continue;
+            }
+        };
+
+        match &container_state[..] {
+            "running" | "restarting" | "paused" => {},
+            "exited" | "dead" => {
+                continue;
+            }
+            _ => {
+                warn!("unknown container state")
+            }
+        };
 
         match &container.id {
             None => {},
@@ -57,7 +75,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
     let labels = container_summary.labels.clone().unwrap_or(HashMap::new());
 
-    debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
+    info!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
 
     let mut container_name = None;
 

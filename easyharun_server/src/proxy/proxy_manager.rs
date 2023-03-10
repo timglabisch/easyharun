@@ -113,7 +113,7 @@ impl ProxyManager {
             };
 
             trace!("sleep");
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(200)).await;
+            ::tokio::time::sleep(::tokio::time::Duration::from_millis(500)).await;
             trace!("/sleep");
         }
     }
