@@ -1,4 +1,5 @@
 use anyhow::Context;
+use tracing::{debug, trace};
 use crate::brain::brain::Brain;
 use crate::config::config_world_builder::build_world_from_config;
 use crate::container_manager::world::Worlds;
@@ -7,9 +8,8 @@ use crate::docker::docker_world_builder::build_world_from_docker;
 
 pub mod world;
 
-pub struct ContainerManager {
-
-}
+#[derive(Debug)]
+pub struct ContainerManager;
 
 impl ContainerManager {
 
@@ -17,6 +17,7 @@ impl ContainerManager {
         Self {}
     }
 
+    #[tracing::instrument]
     pub async fn run(&self) {
 
         loop {
@@ -26,16 +27,22 @@ impl ContainerManager {
                     eprintln!("Container Manager Error {:?}", e);
                 }
             };
+
+            trace!("sleep");
             ::tokio::time::sleep(::tokio::time::Duration::from_millis(100)).await;
+            trace!("/sleep");
         }
 
     }
 
+    #[tracing::instrument]
     async fn tick(&self) -> Result<(), ::anyhow::Error> {
         let worlds = Worlds {
             expected: build_world_from_config().await.context("could not build world from config")?,
             current: build_world_from_docker().await.context("could not build world from docker")?
         };
+
+        debug!("created worlds");
 
         let next_action = Brain::think_about_next_action(&worlds).context("brain error, could not resolve brain action.")?;
 

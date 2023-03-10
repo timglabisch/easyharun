@@ -3,6 +3,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use bollard::container::ListContainersOptions;
+use tracing::{instrument, trace};
 
 use easyharun_lib::portmapping::PortMappingParser;
 use crate::docker::docker_connection::docker_create_connection;
@@ -13,6 +14,7 @@ use crate::proxy::proxy_implementation::tcp_proxy::proxy::TcpProxy;
 use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
 
+#[derive(Debug)]
 pub struct ProxyManager {
     proxies: HashMap<String, ProxyHandle>
 }
@@ -100,6 +102,7 @@ impl ProxyManager {
         }
     }
 
+    #[tracing::instrument]
     pub async fn run(&mut self) {
         loop {
             match self.run_inner().await {
@@ -109,7 +112,9 @@ impl ProxyManager {
                 }
             };
 
+            trace!("sleep");
             ::tokio::time::sleep(::tokio::time::Duration::from_millis(200)).await;
+            trace!("/sleep");
         }
     }
 

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::Docker;
+use tracing::debug;
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
@@ -9,6 +10,7 @@ use crate::kv_container::KV;
 pub struct DockerActionExecuter;
 
 impl DockerActionExecuter {
+    #[tracing::instrument]
     pub async fn execute(action: &BrainAction) -> Result<(), ::anyhow::Error> {
         match action {
             BrainAction::ContainersStart(c) => return Self::execute_containers_start(c).await,
@@ -28,6 +30,7 @@ impl DockerActionExecuter {
     }
 
     async fn execute_container_start(docker: &Docker, container: &ContainerStart) -> Result<(), ::anyhow::Error> {
+        debug!("execute_containers_start");
         let name = Uuid::new_v4();
 
         let labels = {
@@ -72,6 +75,7 @@ impl DockerActionExecuter {
 
     async fn execute_container_stop(container: &ContainerStop) -> Result<(), ::anyhow::Error> {
 
+        debug!("execute_containers_start");
         KV::mark_container_to_be_deleted(&container.id);
 
         Ok(())

@@ -1,12 +1,14 @@
 use anyhow::anyhow;
 use crate::container_manager::world::WorldContainer;
 
+#[derive(Debug, Clone)]
 pub enum BrainAction {
     ContainersStart(Vec<ContainerStart>),
     ContainersStop(Vec<ContainerStop>),
     NoOp,
 }
 
+#[derive(Debug, Clone)]
 pub struct ContainerStop {
     pub id: String,
     pub name: String,
@@ -26,6 +28,7 @@ impl ContainerStop {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ContainerStart {
     pub name: String,
     pub image: String,

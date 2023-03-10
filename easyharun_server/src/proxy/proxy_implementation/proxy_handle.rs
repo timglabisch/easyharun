@@ -4,6 +4,7 @@ use tokio::task::JoinHandle;
 use crate::proxy::brain::ProxyBrainAction;
 
 
+#[derive(Debug)]
 pub struct ProxyHandle {
     sender: ::tokio::sync::mpsc::UnboundedSender<ProxyBrainAction>,
     jh: JoinHandle<()>,
