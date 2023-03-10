@@ -84,6 +84,14 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         None => return Err(anyhow!("container without id"))
     };
 
+    let container_port = match container_summary.ports.clone() {
+        Some(s) => match s.first() {
+            Some(p) => p.private_port as u32,
+            None => return Err(anyhow!("container without port #2"))
+        },
+        None => return Err(anyhow!("container without port"))
+    };
+
     let container_image = match container_summary.image.clone() {
         Some(s) => s,
         None => return Err(anyhow!("container {} has no image", container_id))
@@ -98,18 +106,12 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         }
     }
 
-    let container_name = match container_name {
-        Some(s) => s,
-        None => return Err(anyhow!("container {} has no container_name", container_id))
-    };
-
-
     Ok(Some(
         WorldContainer {
             internal_id: None,
             id: Some(container_id),
             image: container_image,
-            name: container_name,
+            container_port,
         }
     ))
 }

@@ -52,7 +52,6 @@ impl DockerActionExecuter {
 
         let labels = {
             let mut buf = HashMap::new();
-            buf.insert("easyharun_name".to_string(), container.name.to_string());
             buf.insert("easyharun".to_string(), "1.0.0".to_string());
             buf
         };

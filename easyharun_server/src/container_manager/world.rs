@@ -70,7 +70,7 @@ impl Worlds {
     }
 
     fn container_statisfies_container(container_a : &WorldContainer, container_b : &WorldContainer) -> bool {
-        if container_a.name != container_b.name {
+        if container_a.container_port != container_b.container_port {
             return false;
         }
 
@@ -109,8 +109,8 @@ impl World {
 pub struct WorldContainer {
     pub internal_id: Option<String>,
     pub id: Option<String>,
-    pub name: String,
     pub image: String,
+    pub container_port: u32,
 }
 
 impl WorldContainer {
@@ -130,14 +130,14 @@ mod tests {
         let worlds = Worlds {
             expected: World::new(vec![
                 WorldContainer {
-                    name: "foo".to_string(),
+                    container_port: 80,
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
             ], "1"),
             current: World::new(vec![
                 WorldContainer {
-                    name: "foo".to_string(),
+                    container_port: 80,
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
@@ -147,6 +147,69 @@ mod tests {
         let diff = worlds.build_diff_world();
 
         assert_eq!(0, diff.containers_exists_but_should_not_exists.len());
+        assert_eq!(0, diff.containers_does_not_exists_but_should_exists.len());
+    }
+
+    #[test]
+    fn build_world_diff_one_container_is_missing() {
+
+        let worlds = Worlds {
+            expected: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                },
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "1"),
+            current: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "2"),
+        };
+
+        let diff = worlds.build_diff_world();
+
+        assert_eq!(0, diff.containers_exists_but_should_not_exists.len());
+        assert_eq!(1, diff.containers_does_not_exists_but_should_exists.len());
+    }
+
+
+    #[test]
+    fn build_world_diff_one_container_too_much() {
+
+        let worlds = Worlds {
+            expected: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                },
+            ], "1"),
+            current: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                },
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "2"),
+        };
+
+        let diff = worlds.build_diff_world();
+
+        assert_eq!(1, diff.containers_exists_but_should_not_exists.len());
         assert_eq!(0, diff.containers_does_not_exists_but_should_exists.len());
     }
 }
