@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use bollard::container::{Config, CreateContainerOptions, StartContainerOptions, UpdateContainerOptions};
+use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::Docker;
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};

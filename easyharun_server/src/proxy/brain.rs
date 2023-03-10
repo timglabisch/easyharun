@@ -1,4 +1,4 @@
-use crate::proxy::world::{ProxyWorldEntry, ProxyWorlds};
+use crate::proxy::world::{ProxyWorlds};
 
 pub struct ProxyBrain;
 

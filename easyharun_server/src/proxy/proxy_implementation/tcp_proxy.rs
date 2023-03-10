@@ -5,7 +5,7 @@ use std::error::Error;
 use anyhow::{anyhow, Context};
 use futures::FutureExt;
 use tokio::sync::mpsc::UnboundedReceiver;
-use crate::brain::brain_action::BrainAction;
+
 use crate::proxy::brain::ProxyBrainAction;
 use crate::proxy::proxy_implementation::proxy_handle::{ProxyHandle};
 

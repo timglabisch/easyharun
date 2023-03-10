@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Context};
 use bollard::container::ListContainersOptions;
 use tracing::{debug, info, trace, warn};
-use bollard::Docker;
+
 use bollard::models::ContainerSummary;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+
 use crate::container_manager::world::{World, WorldContainer};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
