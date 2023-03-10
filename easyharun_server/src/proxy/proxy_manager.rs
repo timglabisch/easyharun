@@ -152,15 +152,15 @@ impl ProxyManager {
         })
     }
 
-    pub async fn execute_brain_actions_add(&mut self, action : ProxyBrainAction) -> Result<(), ::anyhow::Error> {
+    pub async fn execute_brain_actions_add(&mut self, action : ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
 
         match self.proxies.entry(action.listen_addr.to_string()) {
             Occupied(mut o) => {
-                o.get().send(action)?;
+                o.get_mut().send(ProxyBrainAction::Add(action))?;
             },
             Vacant(o) => {
-                let proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string());
-                proxy.send(action)?;
+                let mut proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string());
+                proxy.send(ProxyBrainAction::Add(action))?;
                 o.insert(proxy);
             },
         };
@@ -171,6 +171,14 @@ impl ProxyManager {
     pub async fn execute_brain_actions_remove_ask(&mut self, action : ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
 
 
+        match self.proxies.entry(action.listen_addr.to_string()) {
+            Occupied(mut o) => {
+                o.get_mut().send(ProxyBrainAction::RemoveAsk(action))?;
+            },
+            Vacant(_) => {
+                eprintln!("could not remove proxy {} - it does not exists", action.listen_addr)
+            },
+        };
 
         Ok(())
     }

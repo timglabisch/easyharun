@@ -49,7 +49,7 @@ impl ProxyBrain {
                     Some(s) => s,
                 };
 
-                if existing_proxy.server_addrs.contains(&proxy_current_addr) {
+                if existing_proxy.server_addrs.contains(proxy_current_addr) {
                     continue
                 }
 
@@ -81,7 +81,7 @@ impl ProxyBrain {
                     Some(s) => s,
                 };
 
-                if existing_proxy.server_addrs.contains(&proxy_expected_addr) {
+                if existing_proxy.server_addrs.contains(proxy_expected_addr) {
                     continue
                 }
 
