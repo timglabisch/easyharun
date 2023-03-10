@@ -5,7 +5,9 @@ use std::error::Error;
 use anyhow::{anyhow, Context};
 use futures::FutureExt;
 use tokio::sync::mpsc::UnboundedReceiver;
-use crate::proxy::proxy_implementation::proxy_handle::{ProxyHandle, ProxyHandleMsg};
+use crate::brain::brain_action::BrainAction;
+use crate::proxy::brain::ProxyBrainAction;
+use crate::proxy::proxy_implementation::proxy_handle::{ProxyHandle};
 
 
 pub struct TcpProxy {
@@ -18,7 +20,7 @@ impl TcpProxy {
 
     pub fn new(
         listen_addr: String,
-        recv: UnboundedReceiver<ProxyHandleMsg>
+        recv: UnboundedReceiver<ProxyBrainAction>
     ) -> Self {
         Self {
             listen_addr,
@@ -31,17 +33,19 @@ impl TcpProxy {
         listen_addr: String
     ) -> ProxyHandle {
 
-        let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyHandleMsg>();
+        let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyBrainAction>();
 
+        let listen_addr_clone = listen_addr.to_string();
         let jh = ::tokio::spawn(async move {
-            Self::new(listen_addr, recv).run().await.expect("tcp proxy failed");
-            Ok(())
+            Self::new(listen_addr_clone, recv).run().await.expect("tcp proxy failed");
+            ()
         });
 
-        ProxyHandle {
+        ProxyHandle::new(
+            sender,
             jh,
-            sender
-        }
+            listen_addr
+        )
     }
 
     pub async fn run(mut self) -> Result<(), ::anyhow::Error> {
