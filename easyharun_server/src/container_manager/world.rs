@@ -105,7 +105,7 @@ impl World {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WorldContainer {
     pub internal_id: Option<String>,
     pub id: Option<String>,
@@ -116,5 +116,37 @@ pub struct WorldContainer {
 impl WorldContainer {
     pub fn get_internal_id(&self) -> String {
         self.internal_id.as_ref().expect("internal id must be given ...").as_str().to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn build_world_diff_all_are_same() {
+
+        let worlds = Worlds {
+            expected: World::new(vec![
+                WorldContainer {
+                    name: "foo".to_string(),
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "1"),
+            current: World::new(vec![
+                WorldContainer {
+                    name: "foo".to_string(),
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "2"),
+        };
+
+        let diff = worlds.build_diff_world();
+
+        assert_eq!(0, diff.containers_exists_but_should_not_exists.len());
+        assert_eq!(0, diff.containers_does_not_exists_but_should_exists.len());
     }
 }
