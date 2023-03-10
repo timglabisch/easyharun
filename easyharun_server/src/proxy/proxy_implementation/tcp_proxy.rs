@@ -4,6 +4,8 @@ use tokio::net::{TcpListener, TcpStream};
 use std::error::Error;
 use anyhow::{anyhow, Context};
 use futures::FutureExt;
+use tokio::sync::mpsc::UnboundedReceiver;
+use crate::proxy::proxy_implementation::proxy_handle::{ProxyHandle, ProxyHandleMsg};
 
 
 pub struct TcpProxy {
@@ -15,12 +17,30 @@ pub struct TcpProxy {
 impl TcpProxy {
 
     pub fn new(
-        listen_addr: String
+        listen_addr: String,
+        recv: UnboundedReceiver<ProxyHandleMsg>
     ) -> Self {
         Self {
             listen_addr,
             server_addrs: vec![],
             stats_requests_all: 0,
+        }
+    }
+
+    pub fn spawn_and_create_handle(
+        listen_addr: String
+    ) -> ProxyHandle {
+
+        let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyHandleMsg>();
+
+        let jh = ::tokio::spawn(async move {
+            Self::new(listen_addr, recv).run().await.expect("tcp proxy failed");
+            Ok(())
+        });
+
+        ProxyHandle {
+            jh,
+            sender
         }
     }
 

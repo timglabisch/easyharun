@@ -111,7 +111,7 @@ impl ProxyManager {
 
         let actions = ProxyBrain::think(&worlds);
 
-        match self.execute_brain_actions(&actions).await {
+        match self.execute_brain_actions(actions).await {
             Ok(_) => {},
             Err(_) => {
                 eprintln!("failed to execute brain actions.");
@@ -121,10 +121,10 @@ impl ProxyManager {
         Ok(())
     }
 
-    async fn execute_brain_actions(&mut self, actions: &Vec<ProxyBrainAction>) -> Result<(), Vec<::anyhow::Error>> {
+    async fn execute_brain_actions(&mut self, actions: Vec<ProxyBrainAction>) -> Result<(), Vec<::anyhow::Error>> {
         let mut errors = vec![];
 
-        for action in actions.iter() {
+        for action in actions.into_iter() {
             match self.execute_brain_action(action).await {
                 Ok(_) => {},
                 Err(e) => {
@@ -141,30 +141,30 @@ impl ProxyManager {
         Ok(())
     }
 
-    async fn execute_brain_action(&mut self, action: &ProxyBrainAction) -> Result<(), ::anyhow::Error> {
+    async fn execute_brain_action(&mut self, action: ProxyBrainAction) -> Result<(), ::anyhow::Error> {
         Ok(match action {
             ProxyBrainAction::Add(a) => self.execute_brain_actions_add(a).await?,
             ProxyBrainAction::RemoveAsk(a) => self.execute_brain_actions_remove_ask(a).await?,
         })
     }
 
-    pub async fn execute_brain_actions_add(&mut self, action : &ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
+    pub async fn execute_brain_actions_add(&mut self, action : ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
 
-        self.proxies.get_mut(&action.listen_addr).unwrap_or_else(|x| {
-
-            let proxy = ::tokio::spawn(async move {
-                TcpProxy::new().run()
-            })
-
-            ProxyHandle {
-                listen_addr: action.listen_addr.clone(),
-            }
-        })
+        match self.proxies.entry(action.listen_addr.to_string()) {
+            Occupied(mut o) => {
+                o.get().send(action)?;
+            },
+            Vacant(o) => {
+                let proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string());
+                proxy.send(action)?;
+                o.insert(proxy);
+            },
+        };
 
         Ok(())
     }
 
-    pub async fn execute_brain_actions_remove_ask(&mut self, action : &ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
+    pub async fn execute_brain_actions_remove_ask(&mut self, action : ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
 
 
 
