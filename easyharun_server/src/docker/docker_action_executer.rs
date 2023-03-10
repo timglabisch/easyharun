@@ -6,7 +6,7 @@ use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 
-struct DockerActionExecuter;
+pub struct DockerActionExecuter;
 
 impl DockerActionExecuter {
     pub async fn execute(action: &BrainAction) -> Result<(), ::anyhow::Error> {

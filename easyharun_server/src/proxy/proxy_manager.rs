@@ -94,6 +94,12 @@ impl ProxyManager {
         })
     }
 
+    pub fn new() -> Self {
+        Self {
+            proxies: HashMap::new(),
+        }
+    }
+
     pub async fn run(&mut self) {
         loop {
             match self.run_inner().await {
