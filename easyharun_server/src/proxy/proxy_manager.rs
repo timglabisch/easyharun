@@ -9,7 +9,7 @@ use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
-use crate::proxy::proxy_implementation::tcp_proxy::TcpProxy;
+use crate::proxy::proxy_implementation::tcp_proxy::proxy::TcpProxy;
 use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
 
