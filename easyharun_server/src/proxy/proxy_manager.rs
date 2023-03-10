@@ -1,6 +1,6 @@
 use std::borrow::BorrowMut;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use bollard::container::ListContainersOptions;
 use bollard::models::PortMap;
@@ -24,9 +24,9 @@ impl ProxyManager {
         let mut buf = HashMap::new();
 
         for (_,proxy) in self.proxies.iter() {
-            buf.insert(proxy.listen_addr.clone(), ProxyWorldEntry {
-                listen_addr: proxy.listen_addr.clone(),
-                server_addrs: proxy.server_addrs.clone()
+            buf.insert(proxy.get_listen_addr().to_string(), ProxyWorldEntry {
+                listen_addr: proxy.get_listen_addr().to_string(),
+                server_addrs: proxy.get_server_addrs().clone()
             });
         }
 
@@ -73,12 +73,16 @@ impl ProxyManager {
             for portmapping in portmappings.iter() {
                 match proxies.entry(portmapping.listen_addr.to_string()) {
                     Occupied(mut o) => {
-                        o.get_mut().server_addrs.push(portmapping.server_addr.to_string());
+                        o.get_mut().server_addrs.insert(portmapping.server_addr.to_string());
                     },
                     Vacant(o) => {
                         o.insert(ProxyWorldEntry {
                             listen_addr: portmapping.listen_addr.clone(),
-                            server_addrs: vec![portmapping.server_addr.clone()]
+                            server_addrs: {
+                                let mut s = HashSet::new();
+                                s.insert(portmapping.server_addr.clone());
+                                s
+                            }
                         });
                     },
                 };
@@ -128,7 +132,7 @@ impl ProxyManager {
             match self.execute_brain_action(action).await {
                 Ok(_) => {},
                 Err(e) => {
-                    eprintln!("failed to execute brain action {:?}:{:?}\n", &action, e);
+                    eprintln!("failed to execute brain action:{:?}\n", e);
                     errors.push(e);
                 }
             }
@@ -148,7 +152,7 @@ impl ProxyManager {
         })
     }
 
-    pub async fn execute_brain_actions_add(&mut self, action : ProxyBrainActionAdd) -> Result<(), ::anyhow::Error> {
+    pub async fn execute_brain_actions_add(&mut self, action : ProxyBrainAction) -> Result<(), ::anyhow::Error> {
 
         match self.proxies.entry(action.listen_addr.to_string()) {
             Occupied(mut o) => {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct ProxyWorlds {
     pub current: ProxyWorld,
@@ -11,7 +11,7 @@ pub struct ProxyWorld {
 
 pub struct ProxyWorldEntry {
     pub listen_addr: String,
-    pub server_addrs: Vec<String>,
+    pub server_addrs: HashSet<String>,
 }
 
 impl ProxyWorlds {
