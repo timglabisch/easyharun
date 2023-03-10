@@ -25,7 +25,7 @@ impl Worlds {
     pub fn build_diff_world(&self) -> WorldDiff {
 
         let mut ids = HashSet::new();
-        for current_container in self.current.containers.iter() {
+        'outer: for current_container in self.current.containers.iter() {
 
             if ids.contains(&current_container.get_internal_id()) {
                 continue;
@@ -40,6 +40,7 @@ impl Worlds {
                 if Self::container_statisfies_container(current_container, expected_container) {
                     ids.insert(current_container.get_internal_id());
                     ids.insert(expected_container.get_internal_id());
+                    break 'outer;
                 }
             }
         }

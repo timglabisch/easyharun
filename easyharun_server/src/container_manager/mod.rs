@@ -44,10 +44,11 @@ impl ContainerManager {
             current: build_world_from_docker().await.context("could not build world from docker")?
         };
 
-        info!("created worlds");
+        debug!("created worlds");
 
         let next_action = Brain::think_about_next_action(&worlds).context("brain error, could not resolve brain action.")?;
 
+        info!("execute action {:?}", next_action);
         DockerActionExecuter::execute(&next_action).await.context("docker action executer")?;
 
         Ok(())

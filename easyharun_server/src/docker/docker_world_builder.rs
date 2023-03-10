@@ -61,7 +61,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
                 warn!("error while scanning container {:?}. error: {:#?}", container.id, e);
             }
             Ok(None) => {
-                info!("container {:?} is ignored.", container.id)
+                debug!("container {:?} is ignored.", container.id)
             },
             Ok(Some(c)) => {
                 world_containers.push(c);
@@ -75,7 +75,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
     let labels = container_summary.labels.clone().unwrap_or(HashMap::new());
 
-    info!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
+    debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
 
     let mut container_name = None;
 

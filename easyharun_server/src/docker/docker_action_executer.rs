@@ -33,7 +33,7 @@ impl DockerActionExecuter {
     }
 
     async fn execute_container_start(docker: &Docker, container: &ContainerStart) -> Result<(), ::anyhow::Error> {
-        info!("execute_containers_start");
+        debug!("execute_containers_start");
 
         let options = CreateImageOptions{
             from_image: container.image.clone(),
@@ -43,9 +43,9 @@ impl DockerActionExecuter {
         let mut create_image = docker.create_image(Some(options), None, None);
 
         while let Some(v) = create_image.next().await {
-            info!("getting image ...");
+            debug!("getting image ...");
         }
-        info!("got image ...");
+        debug!("got image ...");
 
 
         let name = Uuid::new_v4();
@@ -73,6 +73,7 @@ impl DockerActionExecuter {
             )
             .await?;
 
+        debug!("execute_containers_start");
         let _ = &docker
             .start_container(&name.to_string(), None::<StartContainerOptions<String>>)
             .await?;
@@ -93,7 +94,7 @@ impl DockerActionExecuter {
 
     async fn execute_container_stop(container: &ContainerStop) -> Result<(), ::anyhow::Error> {
 
-        info!("execute_containers_start");
+        info!("execute_containers_stop");
         KV::mark_container_to_be_deleted(&container.id);
 
         Ok(())

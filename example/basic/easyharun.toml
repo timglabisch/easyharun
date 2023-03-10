@@ -6,7 +6,7 @@ target = "nginx_port"
 [[container]]
 name = "nginx"
 image = "nginx:latest"
-replicas = 1
+replicas = 2
 container_port = 81
 target_port = "nginx_port"
 health_check_cmd = "curl 127.0.0.1:81"
