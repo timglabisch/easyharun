@@ -9,6 +9,8 @@ mod kv_container;
 mod proxy;
 
 use structopt::StructOpt;
+use easyharun_lib::config::Config;
+use crate::config::config_provider::config_set;
 use crate::container_manager::ContainerManager;
 use crate::proxy::proxy_manager::ProxyManager;
 
@@ -21,6 +23,8 @@ struct Opt {
 #[tokio::main]
 pub async fn main() {
     tracing_subscriber::fmt::init();
+
+    config_set(Config::read_from_file("./example/basic/easyharun.toml").await.expect("could not read config"));
 
     let jh_proxymanager = ::tokio::spawn(async move {
         ProxyManager::new().run().await

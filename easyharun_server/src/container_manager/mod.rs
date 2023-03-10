@@ -1,5 +1,5 @@
 use anyhow::Context;
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 use crate::brain::brain::Brain;
 use crate::config::config_world_builder::build_world_from_config;
 use crate::container_manager::world::Worlds;
@@ -24,7 +24,9 @@ impl ContainerManager {
             match self.tick().await {
                 Ok(_) => {},
                 Err(e) => {
+                    warn!("tick error");
                     eprintln!("Container Manager Error {:?}", e);
+                    panic!("kill");
                 }
             };
 

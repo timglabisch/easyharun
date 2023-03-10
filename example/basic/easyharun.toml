@@ -5,7 +5,7 @@ target = "nginx_port"
 
 [[container]]
 name = "nginx"
-image = "nginx:{{version}}"
+image = "nginx:latest"
 replicas = 1
 container_port = 81
 target_port = "nginx_port"

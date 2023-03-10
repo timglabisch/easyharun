@@ -1,11 +1,14 @@
 use std::collections::HashMap;
+use anyhow::Context;
 use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::Docker;
+use bollard::image::CreateImageOptions;
 use tracing::debug;
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
+use futures::StreamExt;
 
 pub struct DockerActionExecuter;
 
@@ -23,7 +26,7 @@ impl DockerActionExecuter {
         let docker = docker_create_connection()?;
 
         for container_start in action.iter() {
-            Self::execute_container_start(&docker, container_start).await?
+            Self::execute_container_start(&docker, container_start).await.context("starting docker container")?
         }
 
         Ok(())
@@ -31,6 +34,20 @@ impl DockerActionExecuter {
 
     async fn execute_container_start(docker: &Docker, container: &ContainerStart) -> Result<(), ::anyhow::Error> {
         debug!("execute_containers_start");
+
+        let options = CreateImageOptions{
+            from_image: container.image.clone(),
+            ..Default::default()
+        };
+
+        let mut create_image = docker.create_image(Some(options), None, None);
+
+        while let Some(v) = create_image.next().await {
+            debug!("getting image ...");
+        }
+        debug!("got image ...");
+
+
         let name = Uuid::new_v4();
 
         let labels = {

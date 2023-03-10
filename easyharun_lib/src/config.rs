@@ -19,7 +19,7 @@ pub struct ConfigContainer {
     pub name: String,
     pub image: String,
     pub replicas: u32,
-    pub container_port: String,
+    pub container_port: u32,
     pub target_port: String,
     pub health_check_cmd: Option<String>,
 }
