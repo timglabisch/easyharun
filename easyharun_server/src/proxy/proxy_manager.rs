@@ -41,8 +41,8 @@ impl ProxyManager {
 
         let docker = docker_create_connection().context("docker connection?")?;
 
-        let mut filters = HashMap::new();
-        filters.insert("label", vec!["easyharun=\"1.0.0\""]);
+        let mut filters : HashMap<String, Vec<String>> = HashMap::new();
+        // filters.insert("label", vec!["easyharun=\"1.0.0\""]);
 
         let containers = docker.list_containers(Some(ListContainersOptions {
             all: true,
@@ -54,6 +54,15 @@ impl ProxyManager {
         let mut proxies : HashMap<String, ProxyWorldEntry> = HashMap::new();
 
         for container in containers.iter() {
+
+            let labels = match &container.labels {
+                None => continue,
+                Some(s) => s,
+            };
+
+            if labels.get("easyharun") != Some(&"1.0.0".to_string()) {
+                continue;
+            }
 
             if KV::is_container_marked_to_be_deleted(&container.id.as_ref().unwrap_or(&"no-id".to_string())) {
                 continue;

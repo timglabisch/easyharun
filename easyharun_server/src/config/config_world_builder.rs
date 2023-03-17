@@ -24,6 +24,7 @@ pub fn build_world_container_from_config_container(config_container : &ConfigCon
         id: None,
         image: config_container.image.clone(),
         container_port: config_container.container_port.clone(),
+        target_port: config_container.target_port.clone(),
         internal_id: None,
     }
 }

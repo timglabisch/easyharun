@@ -60,6 +60,13 @@ impl DockerActionExecuter {
         let config = Config {
             image: Some(container.image.clone()),
             labels: Some(labels),
+            exposed_ports: Some({
+                let empty = HashMap::<(), ()>::new();
+                let mut exposed_ports = HashMap::new();
+                let exposed_port = format!("{}/tcp", container.container_port);
+                exposed_ports.insert(exposed_port, empty);
+                exposed_ports
+            }),
             ..Default::default()
         };
 

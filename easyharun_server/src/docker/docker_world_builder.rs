@@ -15,8 +15,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 
     let docker = docker_create_connection()?;
 
-    let mut filters = HashMap::new();
-    filters.insert("label", vec!["easyharun=1.0.0"]);
+    let mut filters : HashMap<String, Vec<String>> = HashMap::new();
 
     let containers = docker.list_containers(Some(ListContainersOptions {
         all: true,
@@ -27,6 +26,15 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 
     let mut world_containers = vec![];
     for container in containers.iter() {
+
+        let labels = match &container.labels {
+            None => continue,
+            Some(s) => s,
+        };
+
+        if labels.get("easyharun") != Some(&"1.0.0".to_string()) {
+            continue;
+        }
 
         let container_state = match &container.state {
             Some(s) => s,
@@ -84,6 +92,9 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         None => return Err(anyhow!("container without id"))
     };
 
+    // FIXME
+    // das ist falsch, wir müssen nicht den tatsächlichen port nehmen, sondern den aus der config.
+    // vll aus dem label?
     let container_port = match container_summary.ports.clone() {
         Some(s) => match s.first() {
             Some(p) => p.private_port as u32,
@@ -112,6 +123,7 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
             id: Some(container_id),
             image: container_image,
             container_port,
+            target_port: 0 // FIXME, but we dont care here ...
         }
     ))
 }
