@@ -53,7 +53,7 @@ impl DockerActionExecuter {
         let labels = {
             let mut buf = HashMap::new();
             buf.insert("easyharun".to_string(), "1.0.0".to_string());
-            buf.insert("easyharun_listen".to_string(), format!("{}:{}", container.container_port, container.target_port));
+            buf.insert("easyharun_listen".to_string(), format!("13374:{}", container.container_port));
             buf
         };
 
@@ -61,9 +61,10 @@ impl DockerActionExecuter {
             image: Some(container.image.clone()),
             labels: Some(labels),
             exposed_ports: Some({
-                let empty = HashMap::<(), ()>::new();
                 let mut exposed_ports = HashMap::new();
-                let exposed_port = format!("{}/tcp", container.container_port);
+
+                let mut empty = HashMap::<(), ()>::new();
+                let exposed_port = format!("13374:{}/tcp", container.container_port);
                 exposed_ports.insert(exposed_port, empty);
                 exposed_ports
             }),
