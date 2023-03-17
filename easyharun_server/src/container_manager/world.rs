@@ -25,7 +25,7 @@ impl Worlds {
     pub fn build_diff_world(&self) -> WorldDiff {
 
         let mut ids = HashSet::new();
-        'outer: for current_container in self.current.containers.iter() {
+        for current_container in self.current.containers.iter() {
 
             if ids.contains(&current_container.get_internal_id()) {
                 continue;
@@ -40,7 +40,7 @@ impl Worlds {
                 if Self::container_statisfies_container(current_container, expected_container) {
                     ids.insert(current_container.get_internal_id());
                     ids.insert(expected_container.get_internal_id());
-                    break 'outer;
+                    break;
                 }
             }
         }
@@ -136,6 +136,42 @@ mod tests {
                 }
             ], "1"),
             current: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "2"),
+        };
+
+        let diff = worlds.build_diff_world();
+
+        assert_eq!(0, diff.containers_exists_but_should_not_exists.len());
+        assert_eq!(0, diff.containers_does_not_exists_but_should_exists.len());
+    }
+
+    #[test]
+    fn build_world_diff_all_are_same_multiple() {
+
+        let worlds = Worlds {
+            expected: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                },
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                }
+            ], "1"),
+            current: World::new(vec![
+                WorldContainer {
+                    container_port: 80,
+                    image: "foo:latest".to_string(),
+                    ..Default::default()
+                },
                 WorldContainer {
                     container_port: 80,
                     image: "foo:latest".to_string(),
