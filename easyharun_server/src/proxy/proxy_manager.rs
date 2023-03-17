@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use bollard::container::ListContainersOptions;
-use tracing::{instrument, trace};
+use tracing::{info, instrument, trace, warn};
 
 use easyharun_lib::portmapping::PortMappingParser;
 use crate::docker::docker_connection::docker_create_connection;
@@ -64,7 +64,6 @@ impl ProxyManager {
                 None => continue,
             };
 
-            // syntax should be something like "0.0.0.0:1337->"
             let listen = match labels.get("easyharun_listen") {
                 Some(s) => s,
                 None => continue,
@@ -167,10 +166,13 @@ impl ProxyManager {
 
         match self.proxies.entry(action.listen_addr.to_string()) {
             Occupied(mut o) => {
+                info!(listen_addr = action.listen_addr, server_addr = action.server_addr,"adding server to to proxy");
                 o.get_mut().send(ProxyBrainAction::Add(action))?;
             },
             Vacant(o) => {
                 let mut proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string());
+                info!(listen_addr = action.listen_addr,"creating proxy server");
+                info!(listen_addr = action.listen_addr, server_addr = action.server_addr,"adding server to to proxy");
                 proxy.send(ProxyBrainAction::Add(action))?;
                 o.insert(proxy);
             },
@@ -181,12 +183,13 @@ impl ProxyManager {
 
     pub async fn execute_brain_actions_remove_ask(&mut self, action : ProxyBrainActionRemove) -> Result<(), ::anyhow::Error> {
 
-
         match self.proxies.entry(action.listen_addr.to_string()) {
             Occupied(mut o) => {
+                info!(listen_addr = action.listen_addr, server_addr = action.server_addr,"removing server from proxy");
                 o.get_mut().send(ProxyBrainAction::RemoveAsk(action))?;
             },
             Vacant(_) => {
+                warn!(listen_addr = action.listen_addr, server_addr = action.server_addr,"removing server from proxy (but proxy does not exists)");
                 eprintln!("could not remove proxy {} - it does not exists", action.listen_addr)
             },
         };

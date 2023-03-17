@@ -111,6 +111,7 @@ pub struct WorldContainer {
     pub id: Option<String>,
     pub image: String,
     pub container_port: u32,
+    pub target_port: u32,
 }
 
 impl WorldContainer {

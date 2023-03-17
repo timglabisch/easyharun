@@ -53,6 +53,7 @@ impl DockerActionExecuter {
         let labels = {
             let mut buf = HashMap::new();
             buf.insert("easyharun".to_string(), "1.0.0".to_string());
+            buf.insert("easyharun_listen".to_string(), format!("easyharun_listen={}:{}", container.container_port, container.target_port));
             buf
         };
 
