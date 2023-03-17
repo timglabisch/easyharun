@@ -34,10 +34,10 @@ impl ProxyHandle {
         // the handle must know all server_addrs.
         match &msg {
             &ProxyBrainAction::Add(ref v) => {
-                self.server_addrs.remove(&v.server_addr);
+                self.server_addrs.insert(v.server_addr.to_string());
             },
             &ProxyBrainAction::RemoveAsk(ref v) => {
-                self.server_addrs.insert(v.server_addr.to_string());
+                self.server_addrs.remove(&v.server_addr);
             },
         };
 
