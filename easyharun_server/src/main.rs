@@ -22,6 +22,7 @@ struct Opt {
 
 #[tokio::main]
 pub async fn main() {
+
     tracing_subscriber::fmt::init();
 
     config_set(Config::read_from_file("./example/basic/easyharun.toml").await.expect("could not read config"));
@@ -42,6 +43,4 @@ pub async fn main() {
             panic!("containermanager crash.");
         }
     };
-
-    println!("Hello, world!");
 }

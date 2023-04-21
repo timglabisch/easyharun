@@ -3,6 +3,7 @@ use anyhow::Context;
 use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::Docker;
 use bollard::image::CreateImageOptions;
+use bollard::models::{HostConfig, PortBinding};
 use tracing::{debug, info};
 use uuid::Uuid;
 use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
@@ -53,18 +54,30 @@ impl DockerActionExecuter {
         let labels = {
             let mut buf = HashMap::new();
             buf.insert("easyharun".to_string(), "1.0.0".to_string());
-            buf.insert("easyharun_listen".to_string(), format!("13374:{}", container.container_port));
             buf
         };
+
+        let mut port_bindings = ::std::collections::HashMap::new();
+        port_bindings.insert(
+            format!("{}", container.container_port),
+            Some(vec![PortBinding {
+                host_ip: Some(String::from("0.0.0.0")),
+                host_port: None, // we let the os pick the port
+            }]),
+        );
 
         let config = Config {
             image: Some(container.image.clone()),
             labels: Some(labels),
+            host_config: Some(HostConfig {
+                port_bindings: Some(port_bindings),
+                ..Default::default()
+            }),
             exposed_ports: Some({
                 let mut exposed_ports = HashMap::new();
 
                 let mut empty = HashMap::<(), ()>::new();
-                let exposed_port = format!("13374:{}/tcp", container.container_port);
+                let exposed_port = format!("{}", container.container_port);
                 exposed_ports.insert(exposed_port, empty);
                 exposed_ports
             }),
