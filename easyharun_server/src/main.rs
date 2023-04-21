@@ -7,6 +7,7 @@ mod docker;
 mod brain;
 mod kv_container;
 mod proxy;
+mod health_check;
 
 use structopt::StructOpt;
 use easyharun_lib::config::Config;
