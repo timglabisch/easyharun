@@ -11,6 +11,7 @@ mod proxy;
 use structopt::StructOpt;
 use easyharun_lib::config::Config;
 use crate::config::config_provider::config_set;
+use crate::config::ConfigMonitor;
 use crate::container_manager::ContainerManager;
 use crate::proxy::proxy_manager::ProxyManager;
 
@@ -25,7 +26,11 @@ pub async fn main() {
 
     tracing_subscriber::fmt::init();
 
-    config_set(Config::read_from_file("./example/basic/easyharun.toml").await.expect("could not read config"));
+    ConfigMonitor::load_config().await;
+
+    let jh_config_watch = ::tokio::spawn(async move {
+        ConfigMonitor::async_watch().await
+    });
 
     let jh_proxymanager = ::tokio::spawn(async move {
         ProxyManager::new().run().await
@@ -38,6 +43,9 @@ pub async fn main() {
     ::tokio::select! {
         _ = jh_proxymanager => {
             panic!("proximanager crash.");
+        }
+        _ = jh_config_watch => {
+            panic!("config_watch crash.");
         }
         _ = jh_containermanager => {
             panic!("containermanager crash.");

@@ -13,6 +13,7 @@ structopt = { version = "0.3", features = [ "default" ] }
 lazy_static = "1.*"
 bollard = "*"
 futures = "0.3"
+notify = "5.*"
 
 [dependencies.uuid]
 version = "1.3.0"

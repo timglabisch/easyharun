@@ -33,12 +33,13 @@ pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunni
     };
 
     match &container_state[..] {
-        "running" | "restarting" | "paused" => {},
+        "running" | "restarting" | "paused" | "created" => {}, // todo, id container is created, it not yet has ports. proxy / healthcheck must ignore it...
         "exited" | "dead" => {
             return None;
         }
         _ => {
-            warn!("unknown container state")
+            warn!("unknown container state, {}", &container_state[..]);
+            return None;
         }
     };
 
