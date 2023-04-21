@@ -1,12 +1,13 @@
-[[service]]
-name = "http"
-port = 80
-target = "nginx_port"
-
 [[container]]
 name = "nginx"
 image = "nginx:latest"
 replicas = 1
 container_port = 80
-target_port = 8082
+health_check_cmd = "curl 127.0.0.1:81"
+
+[[container]]
+name = "apache"
+image = "httpd:2.4"
+replicas = 1
+container_port = 80
 health_check_cmd = "curl 127.0.0.1:81"

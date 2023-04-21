@@ -6,6 +6,7 @@ use anyhow::{anyhow, Context};
 use futures::FutureExt;
 use structopt::clap::app_from_crate;
 use tokio::sync::mpsc::UnboundedReceiver;
+use tracing::info;
 use crate::brain::brain_action::BrainAction;
 
 use crate::proxy::brain::{ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
@@ -100,10 +101,15 @@ impl TcpProxy {
             return Err(anyhow!("no backend server..."));
         }
 
-        Ok(self.server_addrs[(self.stats_requests_all % server_addrs_len) as usize].to_string())
+        let id = (self.stats_requests_all % server_addrs_len) as usize;
+
+        Ok(self.server_addrs[id].to_string())
     }
 
     fn handle_accept(&mut self, data : Result<(TcpStream, std::net::SocketAddr), std::io::Error>) -> Result<(), ::anyhow::Error> {
+
+        self.stats_requests_all += 1;
+
         let inbound = match data {
             Ok(v) => v.0,
             Err(e) => {
@@ -113,6 +119,8 @@ impl TcpProxy {
         };
 
         let backend_server_addr = self.pick_server().context("could not pick a backend server")?;
+
+        println!("accept {backend_server_addr}");
 
         let transfer = Self::transfer(inbound, backend_server_addr).map(|r| {
             if let Err(e) = r {
