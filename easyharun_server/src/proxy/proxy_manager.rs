@@ -5,8 +5,9 @@ use anyhow::Context;
 use bollard::container::ListContainersOptions;
 use tracing::{info, instrument, trace, warn};
 
-use easyharun_lib::portmapping::PortMappingParser;
+use easyharun_lib::portmapping::{PortMapping};
 use crate::docker::docker_connection::docker_create_connection;
+use crate::docker::docker_world_builder::{docker_container_info, extract_ports_from_container_summary};
 use crate::kv_container::KV;
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
@@ -55,48 +56,35 @@ impl ProxyManager {
 
         for container in containers.iter() {
 
-            let labels = match &container.labels {
-                None => continue,
-                Some(s) => s,
+            let container_id = match docker_container_info(&container) {
+                Some(s) => s.container_id,
+                None => {
+                    continue
+                }
             };
 
-            if labels.get("easyharun") != Some(&"1.0.0".to_string()) {
-                continue;
-            }
+            let (container_port, host_port) = extract_ports_from_container_summary(container).context("extract ports")?;
 
-            if KV::is_container_marked_to_be_deleted(&container.id.as_ref().unwrap_or(&"no-id".to_string())) {
-                continue;
-            }
-
-            let labels = match &container.labels {
-                Some(s) => s,
-                None => continue,
+            let portmapping = PortMapping {
+                listen_addr: format!("0.0.0.0:{}", container_port),
+                server_addr: format!("127.0.0.1:{}", host_port),
             };
 
-            let listen = match labels.get("easyharun_listen") {
-                Some(s) => s,
-                None => continue,
+            match proxies.entry(portmapping.listen_addr.to_string()) {
+                Occupied(mut o) => {
+                    o.get_mut().server_addrs.insert(portmapping.server_addr.to_string());
+                },
+                Vacant(o) => {
+                    o.insert(ProxyWorldEntry {
+                        listen_addr: portmapping.listen_addr.clone(),
+                        server_addrs: {
+                            let mut s = HashSet::new();
+                            s.insert(portmapping.server_addr.clone());
+                            s
+                        }
+                    });
+                },
             };
-
-            let portmappings = PortMappingParser::parse(listen).context("port mapping")?;
-
-            for portmapping in portmappings.iter() {
-                match proxies.entry(portmapping.listen_addr.to_string()) {
-                    Occupied(mut o) => {
-                        o.get_mut().server_addrs.insert(portmapping.server_addr.to_string());
-                    },
-                    Vacant(o) => {
-                        o.insert(ProxyWorldEntry {
-                            listen_addr: portmapping.listen_addr.clone(),
-                            server_addrs: {
-                                let mut s = HashSet::new();
-                                s.insert(portmapping.server_addr.clone());
-                                s
-                            }
-                        });
-                    },
-                };
-            }
         }
 
         Ok(ProxyWorld {

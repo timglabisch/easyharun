@@ -9,6 +9,63 @@ use crate::container_manager::world::{World, WorldContainer};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 
+pub struct DockerRunningContainerInfo {
+    pub container_id: String,
+}
+
+pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunningContainerInfo> {
+
+    let labels = match &container.labels {
+        None => return None,
+        Some(s) => s,
+    };
+
+    if labels.get("easyharun") != Some(&"1.0.0".to_string()) {
+        return None;
+    }
+
+    let container_state = match &container.state {
+        Some(s) => s,
+        None => {
+            warn!("got a container without state");
+            return None;
+        }
+    };
+
+    match &container_state[..] {
+        "running" | "restarting" | "paused" => {},
+        "exited" | "dead" => {
+            return None;
+        }
+        _ => {
+            warn!("unknown container state")
+        }
+    };
+
+    let container_id = match &container.names {
+        None => {
+            warn!("container without a name");
+            return None;
+        }
+        Some(s) => {
+            match s.first() {
+                None => {
+                    warn!("container without a name #2");
+                    return None;
+                },
+                Some(s) => s.to_string()
+            }
+        }
+    };
+
+    if KV::is_container_marked_to_be_deleted(container_id.as_str()) {
+        return None;
+    }
+
+    return Some(DockerRunningContainerInfo{
+        container_id
+    });
+}
 
 pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     trace!("starting to check the docker world");
@@ -27,40 +84,10 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     let mut world_containers = vec![];
     for container in containers.iter() {
 
-        let labels = match &container.labels {
-            None => continue,
-            Some(s) => s,
-        };
-
-        if labels.get("easyharun") != Some(&"1.0.0".to_string()) {
-            continue;
-        }
-
-        let container_state = match &container.state {
-            Some(s) => s,
+        let container_id = match docker_container_info(&container) {
+            Some(s) => s.container_id,
             None => {
-                warn!("got a container without state");
-                continue;
-            }
-        };
-
-        match &container_state[..] {
-            "running" | "restarting" | "paused" => {},
-            "exited" | "dead" => {
-                continue;
-            }
-            _ => {
-                warn!("unknown container state")
-            }
-        };
-
-        match &container.id {
-            None => {},
-            Some(id) => {
-                // ignore containers that are marked to be deleted.
-                if KV::is_container_marked_to_be_deleted(id.as_str()) {
-                    continue;
-                }
+                continue
             }
         };
 
@@ -80,12 +107,23 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     Ok(World::new(world_containers, "docker"))
 }
 
+pub fn extract_ports_from_container_summary(container_summary : &ContainerSummary) -> Result<(u32, u32), ::anyhow::Error> {
+    match container_summary.ports.clone() {
+        Some(s) => match s.first() {
+            Some(p) => match p.public_port {
+                None => return Err(anyhow!("public port not given")),
+                Some(public_port) => return Ok((p.private_port as u32, public_port as u32))
+            },
+            None => return Err(anyhow!("container without port #2"))
+        },
+        None => return Err(anyhow!("container without port"))
+    };
+}
+
 fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
     let labels = container_summary.labels.clone().unwrap_or(HashMap::new());
 
     debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
-
-    let mut container_name = None;
 
     let container_id = match container_summary.id.clone() {
         Some(s) => s,
@@ -95,27 +133,12 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
     // FIXME
     // das ist falsch, wir müssen nicht den tatsächlichen port nehmen, sondern den aus der config.
     // vll aus dem label?
-    let container_port = match container_summary.ports.clone() {
-        Some(s) => match s.first() {
-            Some(p) => p.private_port as u32,
-            None => return Err(anyhow!("container without port #2"))
-        },
-        None => return Err(anyhow!("container without port"))
-    };
+    let (container_port, host_port) = extract_ports_from_container_summary(container_summary).context("extract ports")?;
 
     let container_image = match container_summary.image.clone() {
         Some(s) => s,
         None => return Err(anyhow!("container {} has no image", container_id))
     };
-
-    for entry in labels.iter() {
-        match &entry.0[..] {
-            "easyharun_name" => container_name = Some(entry.1.clone()),
-            _ => {
-                continue;
-            }
-        }
-    }
 
     Ok(Some(
         WorldContainer {
@@ -123,7 +146,7 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
             id: Some(container_id),
             image: container_image,
             container_port,
-            target_port: 0 // FIXME, but we dont care here ...
+            host_port,
         }
     ))
 }

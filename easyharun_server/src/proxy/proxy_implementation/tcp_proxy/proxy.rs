@@ -100,7 +100,7 @@ impl TcpProxy {
             return Err(anyhow!("no backend server..."));
         }
 
-        Ok(self.server_addrs[(server_addrs_len % self.stats_requests_all) as usize].to_string())
+        Ok(self.server_addrs[(self.stats_requests_all % server_addrs_len) as usize].to_string())
     }
 
     fn handle_accept(&mut self, data : Result<(TcpStream, std::net::SocketAddr), std::io::Error>) -> Result<(), ::anyhow::Error> {
