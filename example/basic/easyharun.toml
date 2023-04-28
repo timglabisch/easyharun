@@ -1,13 +1,23 @@
-[[container]]
-name = "nginx"
-image = "nginx:latest"
-replicas = 1
-container_port = 80
-health_check_cmd = "curl 127.0.0.1:81"
+[[proxy]]
+name = "http"
+port = 80
 
 [[container]]
+replicas = 1
+name = "nginx"
+image = "nginx:latest"
+container_port = 80
+health_checks = ["http"]
+proxy = ["http"]
+
+[[container]]
+replicas = 1
 name = "apache"
 image = "httpd:2.4"
-replicas = 1
 container_port = 80
-health_check_cmd = "curl 127.0.0.1:81"
+health_checks = ["http"]
+proxy = ["http"]
+
+[[health_check]]
+name = "http"
+url = "http://127.0.0.1:{container.host_port}"
