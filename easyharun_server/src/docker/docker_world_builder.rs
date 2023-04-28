@@ -4,13 +4,14 @@ use bollard::container::ListContainersOptions;
 use tracing::{debug, info, trace, warn};
 
 use bollard::models::ContainerSummary;
+use easyharun_lib::ContainerId;
 
 use crate::container_manager::world::{World, WorldContainer};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 
 pub struct DockerRunningContainerInfo {
-    pub container_id: String,
+    pub container_id: ContainerId,
 }
 
 pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunningContainerInfo> {
@@ -43,7 +44,7 @@ pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunni
         }
     };
 
-    let container_id = match &container.names {
+    let container_id = ContainerId::new(match &container.names {
         None => {
             warn!("container without a name");
             return None;
@@ -57,9 +58,9 @@ pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunni
                 Some(s) => s.to_string()
             }
         }
-    };
+    });
 
-    if KV::is_container_marked_to_be_deleted(container_id.as_str()) {
+    if KV::is_container_marked_to_be_deleted(&container_id) {
         return None;
     }
 
@@ -127,7 +128,7 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
     debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));
 
     let container_id = match container_summary.id.clone() {
-        Some(s) => s,
+        Some(s) => ContainerId::new(s),
         None => return Err(anyhow!("container without id"))
     };
 
@@ -138,7 +139,7 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
 
     let container_image = match container_summary.image.clone() {
         Some(s) => s,
-        None => return Err(anyhow!("container {} has no image", container_id))
+        None => return Err(anyhow!("container {} has no image", container_id.as_str()))
     };
 
     Ok(Some(

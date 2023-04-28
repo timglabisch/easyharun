@@ -1,4 +1,5 @@
 use std::collections::{HashSet};
+use easyharun_lib::ContainerId;
 
 
 #[derive(Debug, Clone)]
@@ -108,7 +109,7 @@ impl World {
 #[derive(Debug, Clone, Default)]
 pub struct WorldContainer {
     pub internal_id: Option<String>,
-    pub id: Option<String>,
+    pub id: Option<ContainerId>,
     pub image: String,
     pub container_port: u32,
     pub host_port: u32,
