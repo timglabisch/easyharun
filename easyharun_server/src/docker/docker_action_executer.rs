@@ -33,8 +33,10 @@ impl DockerActionExecuter {
         Ok(())
     }
 
-    async fn execute_container_start(docker: &Docker, container: &ContainerStart) -> Result<(), ::anyhow::Error> {
+    async fn execute_container_start(docker: &Docker, container_start: &ContainerStart) -> Result<(), ::anyhow::Error> {
         debug!("execute_containers_start");
+
+        let container = &container_start.container_world;
 
         let options = CreateImageOptions{
             from_image: container.image.clone(),
@@ -54,6 +56,10 @@ impl DockerActionExecuter {
         let labels = {
             let mut buf = HashMap::new();
             buf.insert("easyharun".to_string(), "1.0.0".to_string());
+            buf.insert("easyharun_name".to_string(), container.name.to_string());
+            buf.insert("easyharun_image".to_string(), container.image.to_string());
+            buf.insert("easyharun_replica_id".to_string(), container.replica_id.to_string());
+            buf.insert("easyharun_container_port".to_string(), container.container_port.to_string());
             buf
         };
 

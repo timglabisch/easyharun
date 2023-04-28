@@ -1,6 +1,6 @@
 [[proxy]]
 name = "http"
-port = 80
+listen = "0.0.0.0:80"
 
 [[container]]
 replicas = 1
@@ -8,7 +8,7 @@ name = "nginx"
 image = "nginx:latest"
 container_port = 80
 health_checks = ["http"]
-proxy = ["http"]
+proxies = ["http"]
 
 [[container]]
 replicas = 1
@@ -16,8 +16,9 @@ name = "apache"
 image = "httpd:2.4"
 container_port = 80
 health_checks = ["http"]
-proxy = ["http"]
+proxies = ["http"]
 
 [[health_check]]
 name = "http"
+check = "http"
 url = "http://127.0.0.1:{container.host_port}"

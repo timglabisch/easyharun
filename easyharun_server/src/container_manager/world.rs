@@ -1,4 +1,4 @@
-use std::collections::{HashSet};
+use std::collections::{HashMap, HashSet};
 use easyharun_lib::ContainerId;
 
 
@@ -24,62 +24,42 @@ impl WorldDiff {
 
 impl Worlds {
     pub fn build_diff_world(&self) -> WorldDiff {
-
-        let mut ids = HashSet::new();
-        for current_container in self.current.containers.iter() {
-
-            if ids.contains(&current_container.get_internal_id()) {
-                continue;
+        let current_map = {
+            let mut map = HashMap::new();
+            for c in &self.current.containers {
+                map.insert(c.get_identifier(), c.clone());
             }
+            map
+        };
 
-            for expected_container in self.expected.containers.iter() {
-
-                if ids.contains(&expected_container.get_internal_id()) {
-                    continue;
-                }
-
-                if Self::container_statisfies_container(current_container, expected_container) {
-                    ids.insert(current_container.get_internal_id());
-                    ids.insert(expected_container.get_internal_id());
-                    break;
-                }
+        let expected_map = {
+            let mut map = HashMap::new();
+            for c in &self.expected.containers {
+                map.insert(c.get_identifier(), c.clone());
             }
-        }
+            map
+        };
 
         let mut containers_exists_but_should_not_exists = vec![];
-        for current_container in self.current.containers.iter() {
-            if ids.contains(&current_container.get_internal_id()) {
-                continue;
-            }
 
-            containers_exists_but_should_not_exists.push(current_container.clone());
+        for (container_identifier, container) in &current_map {
+            if !expected_map.contains_key(container_identifier) {
+                containers_exists_but_should_not_exists.push(container.clone());
+            }
         }
 
         let mut containers_does_not_exists_but_should_exists = vec![];
-        for expected_container in self.expected.containers.iter() {
-            if ids.contains(&expected_container.get_internal_id()) {
-                continue;
-            }
 
-            containers_does_not_exists_but_should_exists.push(expected_container.clone());
+        for (container_identifier, container) in &expected_map {
+            if !current_map.contains_key(container_identifier) {
+                containers_does_not_exists_but_should_exists.push(container.clone());
+            }
         }
 
         WorldDiff {
             containers_does_not_exists_but_should_exists,
             containers_exists_but_should_not_exists
         }
-    }
-
-    fn container_statisfies_container(container_a : &WorldContainer, container_b : &WorldContainer) -> bool {
-        if container_a.container_port != container_b.container_port {
-            return false;
-        }
-
-        if container_a.image != container_b.image {
-            return false;
-        }
-
-        true
     }
 }
 
@@ -89,13 +69,7 @@ pub struct World {
 }
 
 impl World {
-    pub fn new(containers: Vec<WorldContainer>, unique_world_name: &str) -> Self {
-
-        let containers = containers.into_iter().enumerate().map(|(id, mut world_container)| {
-            world_container.internal_id = Some(format!("{}_{}", unique_world_name, id));
-            world_container
-        }).collect();
-
+    pub fn new(containers: Vec<WorldContainer>) -> Self {
         Self {
             containers
         }
@@ -108,16 +82,16 @@ impl World {
 
 #[derive(Debug, Clone, Default)]
 pub struct WorldContainer {
-    pub internal_id: Option<String>,
-    pub id: Option<ContainerId>,
+    pub container_id: Option<ContainerId>,
+    pub name: String,
     pub image: String,
+    pub replica_id: u32,
     pub container_port: u32,
-    pub host_port: u32,
 }
 
 impl WorldContainer {
-    pub fn get_internal_id(&self) -> String {
-        self.internal_id.as_ref().expect("internal id must be given ...").as_str().to_string()
+    pub fn get_identifier(&self) -> String {
+        format!("{}|{}|{}|{}", self.name, self.image, self.replica_id, self.container_port)
     }
 }
 
@@ -136,14 +110,14 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "1"),
+            ]),
             current: World::new(vec![
                 WorldContainer {
                     container_port: 80,
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "2"),
+            ]),
         };
 
         let diff = worlds.build_diff_world();
@@ -167,7 +141,7 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "1"),
+            ]),
             current: World::new(vec![
                 WorldContainer {
                     container_port: 80,
@@ -179,7 +153,7 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "2"),
+            ]),
         };
 
         let diff = worlds.build_diff_world();
@@ -203,14 +177,14 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "1"),
+            ]),
             current: World::new(vec![
                 WorldContainer {
                     container_port: 80,
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "2"),
+            ]),
         };
 
         let diff = worlds.build_diff_world();
@@ -230,7 +204,7 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
-            ], "1"),
+            ]),
             current: World::new(vec![
                 WorldContainer {
                     container_port: 80,
@@ -242,7 +216,7 @@ mod tests {
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
-            ], "2"),
+            ]),
         };
 
         let diff = worlds.build_diff_world();

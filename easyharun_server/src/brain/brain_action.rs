@@ -12,34 +12,30 @@ pub enum BrainAction {
 #[derive(Debug, Clone)]
 pub struct ContainerStop {
     pub id: ContainerId,
-    pub image: String,
+    pub world_container: WorldContainer,
 }
 
 impl ContainerStop {
     pub fn new_from_world_container(world_container : &WorldContainer) -> Result<Self, ::anyhow::Error> {
         Ok(Self {
-            id: match &world_container.id {
+            id: match &world_container.container_id {
                 Some(id) => id.clone(),
                 None => return Err(anyhow!("could not stop container without id"))
             },
-            image: world_container.image.to_string(),
+            world_container: world_container.clone(),
         })
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct ContainerStart {
-    pub container_port: u32,
-    pub host_port: u32,
-    pub image: String,
+    pub container_world: WorldContainer,
 }
 
 impl ContainerStart {
-    pub fn new_from_world_container(world_container : &WorldContainer) -> Self {
+    pub fn new_from_world_container(container_world : &WorldContainer) -> Self {
         Self {
-            container_port: world_container.container_port,
-            host_port: world_container.host_port,
-            image: world_container.image.to_string(),
+            container_world: container_world.clone(),
         }
     }
 }

@@ -4,6 +4,7 @@ use bollard::container::ListContainersOptions;
 use tracing::{debug, info, trace, warn};
 
 use bollard::models::ContainerSummary;
+use easyharun_lib::config::ConfigContainer;
 use easyharun_lib::ContainerId;
 
 use crate::container_manager::world::{World, WorldContainer};
@@ -106,7 +107,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
         };
     }
 
-    Ok(World::new(world_containers, "docker"))
+    Ok(World::new(world_containers))
 }
 
 pub fn extract_ports_from_container_summary(container_summary : &ContainerSummary) -> Result<(u32, u32), ::anyhow::Error> {
@@ -132,23 +133,39 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         None => return Err(anyhow!("container without id"))
     };
 
-    // FIXME
-    // das ist falsch, wir müssen nicht den tatsächlichen port nehmen, sondern den aus der config.
-    // vll aus dem label?
-    let (container_port, host_port) = extract_ports_from_container_summary(container_summary).context("extract ports")?;
+    let name = match labels.get("easyharun_name") {
+        Some(s) => s.to_string(),
+        None => return Err(anyhow!("container without name"))
+    };
 
-    let container_image = match container_summary.image.clone() {
-        Some(s) => s,
-        None => return Err(anyhow!("container {} has no image", container_id.as_str()))
+    let image = match labels.get("easyharun_image") {
+        Some(s) => s.to_string(),
+        None => return Err(anyhow!("container without image"))
+    };
+
+    let replica_id = match labels.get("easyharun_replica_id") {
+        Some(s) => match s.parse::<u32>() {
+            Ok(k) => k,
+            Err(e) => return Err(anyhow!("invalid easyharun_replica_id (not a number)"))
+        },
+        None => return Err(anyhow!("container without replica_id"))
+    };
+
+    let container_port = match labels.get("easyharun_container_port") {
+        Some(s) => match s.parse::<u32>() {
+            Ok(k) => k,
+            Err(e) => return Err(anyhow!("invalid easyharun_container_port (not a number)"))
+        },
+        None => return Err(anyhow!("container without easyharun_container_port"))
     };
 
     Ok(Some(
         WorldContainer {
-            internal_id: None,
-            id: Some(container_id),
-            image: container_image,
+            container_id: Some(container_id),
+            name,
+            image,
+            replica_id,
             container_port,
-            host_port,
         }
     ))
 }
