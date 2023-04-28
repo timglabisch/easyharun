@@ -9,10 +9,10 @@ pub enum HealthCheckType {
     HealthCheckTypeHttp(HealthCheckHttpConfig),
 }
 
-enum HealthCheckTypes {
+enum HealthCheck {
     Http(HealthCheckHttpHandle),
 }
 
 pub struct HealthCheckManager {
-    health_checks: Vec<HealthCheckTypes>,
+    health_checks: Vec<HealthCheck>,
 }
