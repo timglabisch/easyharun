@@ -10,9 +10,9 @@ pub struct ConfigFile {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigFileHealthCheck {
-    name: String,
-    check: String,
-    url: String
+    pub name: String,
+    pub check: String,
+    pub url: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
