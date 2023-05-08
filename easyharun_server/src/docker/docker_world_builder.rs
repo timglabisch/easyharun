@@ -159,6 +159,24 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
         None => return Err(anyhow!("container without easyharun_container_port"))
     };
 
+    let container_port = match labels.get("easyharun_container_port") {
+        Some(s) => match s.parse::<u32>() {
+            Ok(k) => k,
+            Err(e) => return Err(anyhow!("invalid easyharun_container_port (not a number)"))
+        },
+        None => return Err(anyhow!("container without easyharun_container_port"))
+    };
+
+    let health_checks = match labels.get("easyharun_health_checks") {
+        Some(s) => s.split(",").map(|x|x.to_string()).collect::<Vec<_>>(),
+        None => return Err(anyhow!("container without health_checks"))
+    };
+
+    let proxies = match labels.get("easyharun_proxies") {
+        Some(s) => s.split(",").map(|x|x.to_string()).collect::<Vec<_>>(),
+        None => return Err(anyhow!("container without proxies"))
+    };
+
     Ok(Some(
         WorldContainer {
             container_id: Some(container_id),
@@ -166,6 +184,8 @@ fn build_world_container(container_summary : &ContainerSummary) -> Result<Option
             image,
             replica_id,
             container_port,
+            health_checks,
+            proxies
         }
     ))
 }

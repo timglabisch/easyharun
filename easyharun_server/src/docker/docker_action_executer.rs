@@ -60,6 +60,9 @@ impl DockerActionExecuter {
             buf.insert("easyharun_image".to_string(), container.image.to_string());
             buf.insert("easyharun_replica_id".to_string(), container.replica_id.to_string());
             buf.insert("easyharun_container_port".to_string(), container.container_port.to_string());
+            buf.insert("easyharun_health_checks".to_string(), container.health_checks.join(","));
+            buf.insert("easyharun_proxies".to_string(), container.proxies.join(","));
+
             buf
         };
 

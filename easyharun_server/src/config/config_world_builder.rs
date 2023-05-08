@@ -14,6 +14,8 @@ pub async fn build_world_from_config() -> Result<World, ::anyhow::Error> {
             image: config_container.image.clone(),
             replica_id: config_container.replica_id.clone(),
             container_port: config_container.container_port.clone(),
+            proxies: config_container.proxies.clone(),
+            health_checks: config_container.health_checks.clone()
         });
     }
 

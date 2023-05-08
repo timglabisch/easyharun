@@ -87,6 +87,8 @@ pub struct WorldContainer {
     pub image: String,
     pub replica_id: u32,
     pub container_port: u32,
+    pub health_checks: Vec<String>,
+    pub proxies: Vec<String>,
 }
 
 impl WorldContainer {
