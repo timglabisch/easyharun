@@ -110,12 +110,12 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     Ok(World::new(world_containers))
 }
 
-pub fn extract_ports_from_container_summary(container_summary : &ContainerSummary) -> Result<(u32, u32), ::anyhow::Error> {
+pub fn extract_dynamic_port_form_container(container_summary : &ContainerSummary) -> Result<u32, ::anyhow::Error> {
     match container_summary.ports.clone() {
         Some(s) => match s.first() {
             Some(p) => match p.public_port {
                 None => return Err(anyhow!("public port not given")),
-                Some(public_port) => return Ok((p.private_port as u32, public_port as u32))
+                Some(public_port) => return Ok(public_port as u32)
             },
             None => return Err(anyhow!("container without port #2"))
         },
@@ -123,7 +123,7 @@ pub fn extract_ports_from_container_summary(container_summary : &ContainerSummar
     };
 }
 
-fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
+pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
     let labels = container_summary.labels.clone().unwrap_or(HashMap::new());
 
     debug!("inspecting container {}", container_summary.id.as_ref().unwrap_or(&"NO_ID".to_string()));

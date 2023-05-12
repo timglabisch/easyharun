@@ -4,10 +4,12 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use bollard::container::ListContainersOptions;
 use tracing::{info, instrument, trace, warn};
+use easyharun_lib::config::Config;
 
 use easyharun_lib::portmapping::{PortMapping};
+use crate::config::config_provider::config_get;
 use crate::docker::docker_connection::docker_create_connection;
-use crate::docker::docker_world_builder::{docker_container_info, extract_ports_from_container_summary};
+use crate::docker::docker_world_builder::{build_world_container, docker_container_info, extract_dynamic_port_form_container};
 use crate::kv_container::KV;
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
@@ -38,7 +40,7 @@ impl ProxyManager {
         }
     }
 
-    pub async fn create_proxy_world_expected() -> Result<ProxyWorld, ::anyhow::Error> {
+    pub async fn create_proxy_world_expected(config : &Config) -> Result<ProxyWorld, ::anyhow::Error> {
 
         let docker = docker_create_connection().context("docker connection?")?;
 
@@ -63,11 +65,36 @@ impl ProxyManager {
                 }
             };
 
-            let (container_port, host_port) = extract_ports_from_container_summary(container).context("extract ports")?;
+            let container_world = match build_world_container(container).context("could not build world container")? {
+                Some(s) => s,
+                None => {
+                    continue;
+                }
+            };
+
+            let container_dynamic_port = extract_dynamic_port_form_container(container).context("extract ports")?;
+
+            let config_proxy = {
+                // todo, support multiple proxies?
+                let proxy_name = match container_world.proxies.first() {
+                    Some(s) => s,
+                    None => {
+                        continue;
+                    }
+                };
+
+                match config.proxy.iter().find(|c|&c.name == proxy_name) {
+                    Some(s) => s,
+                    None => {
+                        warn!("Could not use proxy. Container {:?} uses proxy {}, but proxy does not exist in config.", container_id, proxy_name);
+                        continue;
+                    }
+                }
+            };
 
             let portmapping = PortMapping {
-                listen_addr: format!("0.0.0.0:{}", container_port),
-                server_addr: format!("127.0.0.1:{}", host_port),
+                listen_addr: config_proxy.listen.to_string(),
+                server_addr: format!("127.0.0.1:{}", container_dynamic_port),
             };
 
             match proxies.entry(portmapping.listen_addr.to_string()) {
@@ -115,9 +142,12 @@ impl ProxyManager {
     }
 
     pub async fn run_inner(&mut self) -> Result<(), ::anyhow::Error> {
+
+        let config = config_get();
+
         let worlds = ProxyWorlds {
             current: self.create_proxy_world_current(),
-            expected: Self::create_proxy_world_expected().await?
+            expected: Self::create_proxy_world_expected(&config).await?
         };
 
         let actions = ProxyBrain::think(&worlds);
