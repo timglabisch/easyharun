@@ -3,14 +3,9 @@ pub mod http;
 
 #[derive(Debug)]
 pub struct HealthCheckMsgRecvCheckFailed {
-    target: HealthCheckTarget,
+    target: String,
 }
 
 pub enum HealthCheckMsgRecv {
     CheckFailed(HealthCheckMsgRecvCheckFailed),
-}
-
-#[derive(Debug)]
-pub struct HealthCheckTarget {
-    target_id: String,
 }

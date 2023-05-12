@@ -16,6 +16,7 @@ use crate::health_check::http::health_check_http::{HealthCheckHttp, HealthCheckH
 pub struct HealthCheckHttpConfig {
     pub container_id: ContainerId,
     pub url: String,
+    pub timeout_ms: u32,
 }
 
 pub enum HealthCheckType {
@@ -213,6 +214,7 @@ impl HealthCheckManager {
                 HealthCheckHttpConfig {
                     container_id: container_id.clone(),
                     url: config_health_check.url.to_string(),
+                    timeout_ms: config_health_check.timeout_ms,
                 },
             )),
             _ => return Err(anyhow!("health_check type {} is not defined", config_health_check.check)),

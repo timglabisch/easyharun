@@ -22,3 +22,4 @@ proxies = ["http"]
 name = "http"
 check = "http"
 url = "http://127.0.0.1:{container.host_port}"
+timeout_ms = 1000

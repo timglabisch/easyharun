@@ -12,7 +12,8 @@ pub struct ConfigFile {
 pub struct ConfigFileHealthCheck {
     pub name: String,
     pub check: String,
-    pub url: String
+    pub url: String,
+    pub timeout_ms: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
