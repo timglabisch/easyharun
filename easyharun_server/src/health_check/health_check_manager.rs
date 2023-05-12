@@ -143,6 +143,7 @@ impl HealthCheckManager {
                     }
                 };
 
+                info!("Starting Health Checks for {:?}", world_container.container_id);
                 self.health_checks.insert(
                     container_id.clone(),
                     self.build_health_checks_for_container(&world_container, &config).context("could not build health checks")?,

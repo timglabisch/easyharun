@@ -14,6 +14,7 @@ use easyharun_lib::config::Config;
 use crate::config::config_provider::config_set;
 use crate::config::ConfigMonitor;
 use crate::container_manager::ContainerManager;
+use crate::health_check::health_check_manager::HealthCheckManager;
 use crate::proxy::proxy_manager::ProxyManager;
 
 #[derive(Debug, StructOpt)]
@@ -41,6 +42,10 @@ pub async fn main() {
         ContainerManager::new().run().await
     });
 
+    let jh_healh_check_manager = ::tokio::spawn(async move {
+        HealthCheckManager::new().run().await
+    });
+
     ::tokio::select! {
         _ = jh_proxymanager => {
             panic!("proximanager crash.");
@@ -50,6 +55,9 @@ pub async fn main() {
         }
         _ = jh_containermanager => {
             panic!("containermanager crash.");
+        }
+        _ = jh_healh_check_manager => {
+            panic!("jh_healh_check_manager crash.");
         }
     };
 }
