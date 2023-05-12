@@ -10,6 +10,12 @@ pub struct HealthCheckHttpHandle {
     message_send: Sender<HealthCheckHttpHandleMsg>,
 }
 
+impl HealthCheckHttpHandle {
+    pub fn kill(&self) {
+        self.message_send.send(HealthCheckHttpHandleMsg::Kill);
+    }
+}
+
 pub struct HealthCheckHttp {
     health_check_id: String,
     sender: Sender<HealthCheckMsgRecv>,
