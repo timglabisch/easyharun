@@ -12,15 +12,15 @@ use crate::health_check::HealthCheckMsgRecv;
 use crate::health_check::http::health_check_http::{HealthCheckHttp, HealthCheckHttpHandle};
 
 pub struct HealthCheckHttpConfig {
-    container_id: String,
-    url: String,
+    pub container_id: ContainerId,
+    pub url: String,
 }
 
 pub enum HealthCheckType {
     HealthCheckTypeHttp(HealthCheckHttpConfig),
 }
 
-enum HealthCheck {
+pub enum HealthCheck {
     Http(HealthCheckHttpHandle),
 }
 
@@ -81,14 +81,15 @@ impl HealthCheckManager {
             // removing or adding a health check will result in a new container.
             // so we've 2 cases.
             // 1. all health checks are missing
-            match self.health_checks.entry(container_id) {
-                Occupied(mut o) => {
-                    continue;
-                }
-                Vacant(o) => {
-                    o.insert(self::build_world_from_docker());
-                }
+
+            if self.health_checks.get(&container_id).is_some() {
+                continue;
             }
+
+            self.health_checks.insert(
+                container_id,
+                self.build_health_checks_for_container(&world_container, &config).context("could not build health checks")?
+            );
         }
 
         // die health checks selbst sind in der config definiert
@@ -99,35 +100,44 @@ impl HealthCheckManager {
         Ok(())
     }
 
-    pub fn build_health_checks_for_container(world_container: &WorldContainer, config: &Config) -> Result<Vec<(String, HealthCheck)>, ::anyhow::Error> {
+    pub fn build_health_checks_for_container(
+        &self,
+        world_container: &WorldContainer,
+        config: &Config
+    ) -> Result<Vec<(String, HealthCheck)>, ::anyhow::Error> {
         let mut buf = vec![];
         for health_check_expected in world_container.health_checks.iter() {
+            let health_check = self.build_health_check(
+                &world_container.container_id.clone().context("container must have a container id")?,
+                health_check_expected.as_str(),
+                config
+            ).context("build health check")?;
 
-            let container_id = match world_container.container_id {
-                Some(s) => s,
-                None => return Err(anyhow!("container not found, should not happen")),
-            };
-
-            buf.insert((
+            buf.push((
                 health_check_expected.to_string(),
-                self::build_health_check(world_container.container_id)?
-            ))
+                health_check
+            ));
         }
 
         Ok(buf)
     }
 
-    pub fn build_health_check(container_id: ContainerId, name: &str, config: &Config) -> Result<HealthCheck, ::anyhow::Error> {
-        let config_health_check = match config.health_check.iter().find(|x| x.name == name) {
+    pub fn build_health_check(&self, container_id: &ContainerId, health_check_name: &str, config: &Config) -> Result<HealthCheck, ::anyhow::Error> {
+        let config_health_check = match config.health_check.iter().find(|x| x.name == health_check_name) {
             Some(s) => s,
-            None => return Err(anyhow!("could not find config for health_check {}", name))
+            None => return Err(anyhow!("could not find config for health_check {}", health_check_name))
         };
 
-        match config_health_check.check {
+        Ok(match config_health_check.check.as_str() {
             "http" => HealthCheck::Http(HealthCheckHttp::new(
-                format!("{}-{}", name, container_id.as_str()),
-            ))
+                format!("{}-{}", health_check_name, container_id.as_str()),
+                self.sender.clone(),
+                HealthCheckHttpConfig {
+                    container_id: container_id.clone(),
+                    url: config_health_check.url.to_string(),
+                }
+            )),
             _ => return Err(anyhow!("health_check type {} is not defined", config_health_check.check)),
-        }
+        })
     }
 }
