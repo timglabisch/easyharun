@@ -113,6 +113,7 @@ impl TcpProxy {
             // todo, the read lock might be expensive.
             if !KV::is_target_healthy(server) {
                 info!("skip (unhealthy) {}", server);
+                continue;
             }
 
             return Ok(self.server_addrs[id].to_string());
