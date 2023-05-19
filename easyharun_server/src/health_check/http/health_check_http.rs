@@ -78,6 +78,7 @@ impl HealthCheckHttp {
         let response = match request.await.context("health check request") {
             Err(e) => {
                 self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
+                    container_id: self.check_config.container_id.clone(),
                     target: url.to_string(),
                     reason: "Timeout".to_string(),
                 })).await?;
@@ -88,6 +89,7 @@ impl HealthCheckHttp {
                 Ok(res) => res,
                 Err(e) => {
                     self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
+                        container_id: self.check_config.container_id.clone(),
                         target: url.to_string(),
                         reason: format!("Error : {:?}", e),
                     })).await?;
@@ -99,6 +101,7 @@ impl HealthCheckHttp {
 
         if !response.status().is_success() {
             self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
+                container_id: self.check_config.container_id.clone(),
                 target: url.to_string(),
                 reason: format!("Unsuccessful response : {:?}", response),
             })).await?;
@@ -107,6 +110,7 @@ impl HealthCheckHttp {
         }
 
         self.sender.send(HealthCheckMsgRecv::CheckOk(HealthCheckMsgRecvCheckOk {
+            container_id: self.check_config.container_id.clone(),
             target: url.to_string(),
         })).await?;
 

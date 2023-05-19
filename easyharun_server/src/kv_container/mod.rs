@@ -11,12 +11,14 @@ lazy_static! {
 #[derive(Eq, PartialEq)]
 pub struct ContainerState {
     should_be_deleted: bool,
+    healthy: bool,
 }
 
 impl ContainerState {
     pub fn new_default() -> Self {
         Self {
             should_be_deleted: false,
+            healthy: false,
         }
     }
 }
@@ -24,6 +26,22 @@ impl ContainerState {
 pub struct KV;
 
 impl KV {
+
+    pub fn mark_container_healthy(container_id: &ContainerId, healthy : bool) {
+        {
+            let read = _KV.read().expect("could not read kv");
+
+            match read.get(container_id.as_str()) {
+                Some(s) if s.healthy == healthy => {
+                    return; // << has already the right state.
+                },
+                _ => false,
+            };
+        }
+
+        // just do a write lock, if we need to change it.
+        _KV.write().expect("kv write").entry(container_id.as_str().to_string()).or_insert(ContainerState::new_default()).healthy = healthy;
+    }
 
     pub fn mark_container_to_be_deleted(container_id: &ContainerId) {
         _KV.write().expect("kv write").entry(container_id.as_str().to_string()).or_insert(ContainerState::new_default()).should_be_deleted = true;

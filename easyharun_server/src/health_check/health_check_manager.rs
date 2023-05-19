@@ -12,6 +12,7 @@ use crate::container_manager::world::WorldContainer;
 use crate::docker::docker_world_builder::build_world_from_docker;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
 use crate::health_check::http::health_check_http::{HealthCheckHttp, HealthCheckHttpHandle};
+use crate::kv_container::KV;
 
 pub struct HealthCheckHttpConfig {
     pub container_id: ContainerId,
@@ -102,11 +103,13 @@ impl HealthCheckManager {
 
     pub async fn on_health_check_failed(&self, msg : HealthCheckMsgRecvCheckFailed) -> Result<(), ::anyhow::Error> {
         info!("health check failed {:?}", msg);
+        KV::mark_container_healthy(&msg.container_id, false);
         Ok(())
     }
 
     pub async fn on_health_check_ok(&self, msg : HealthCheckMsgRecvCheckOk) -> Result<(), ::anyhow::Error> {
         info!("health check ok {:?}", msg);
+        KV::mark_container_healthy(&msg.container_id, true);
         Ok(())
     }
 
