@@ -6,8 +6,9 @@ use anyhow::{anyhow, Context};
 use futures::FutureExt;
 use structopt::clap::app_from_crate;
 use tokio::sync::mpsc::UnboundedReceiver;
-use tracing::info;
+use tracing::{info, warn};
 use crate::brain::brain_action::BrainAction;
+use crate::kv_container::KV;
 
 use crate::proxy::brain::{ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::{ProxyHandle};
@@ -101,8 +102,25 @@ impl TcpProxy {
             return Err(anyhow!("no backend server..."));
         }
 
-        let id = (self.stats_requests_all % server_addrs_len) as usize;
 
+        // we pick the first server that is healthy // todo
+        for i in 0..server_addrs_len {
+
+            let id = ((self.stats_requests_all + i) % server_addrs_len) as usize;
+            let server = &self.server_addrs[id];
+
+
+            // todo, the read lock might be expensive.
+            if !KV::is_target_healthy(server) {
+                info!("skip (unhealthy) {}", server);
+            }
+
+            return Ok(self.server_addrs[id].to_string());
+        }
+
+        // todo, deleted servers?
+        warn!("all servers are unhealthy, we pick the first one.");
+        let id = ((self.stats_requests_all) % server_addrs_len) as usize;
         Ok(self.server_addrs[id].to_string())
     }
 

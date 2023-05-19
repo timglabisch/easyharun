@@ -103,13 +103,13 @@ impl HealthCheckManager {
 
     pub async fn on_health_check_failed(&self, msg : HealthCheckMsgRecvCheckFailed) -> Result<(), ::anyhow::Error> {
         info!("health check failed {:?}", msg);
-        KV::mark_container_healthy(&msg.container_id, false);
+        KV::mark_container_target_healthy(&msg.container_id, &msg.target, false);
         Ok(())
     }
 
     pub async fn on_health_check_ok(&self, msg : HealthCheckMsgRecvCheckOk) -> Result<(), ::anyhow::Error> {
         info!("health check ok {:?}", msg);
-        KV::mark_container_healthy(&msg.container_id, true);
+        KV::mark_container_target_healthy(&msg.container_id, &msg.target, true);
         Ok(())
     }
 
