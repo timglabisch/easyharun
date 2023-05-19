@@ -3,7 +3,7 @@ use anyhow::Context;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::trace;
 use crate::health_check::health_check_manager::HealthCheckHttpConfig;
-use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed};
+use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
 
 pub enum HealthCheckHttpHandleMsg {
     Kill,
@@ -78,12 +78,37 @@ impl HealthCheckHttp {
         let response = match request.await.context("health check request") {
             Err(e) => {
                 self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
-                    target: url.to_string()
-                }))
+                    target: url.to_string(),
+                    reason: "Timeout".to_string(),
+                })).await?;
+
+                return Ok(());
             },
-            Ok(v) => v,
+            Ok(raw_resp) => match  raw_resp {
+                Ok(res) => res,
+                Err(e) => {
+                    self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
+                        target: url.to_string(),
+                        reason: format!("Error : {:?}", e),
+                    })).await?;
+
+                    return Ok(());
+                },
+            },
         };
 
+        if !response.status().is_success() {
+            self.sender.send(HealthCheckMsgRecv::CheckFailed(HealthCheckMsgRecvCheckFailed {
+                target: url.to_string(),
+                reason: format!("Unsuccessful response : {:?}", response),
+            })).await?;
+
+            return Ok(());
+        }
+
+        self.sender.send(HealthCheckMsgRecv::CheckOk(HealthCheckMsgRecvCheckOk {
+            target: url.to_string(),
+        })).await?;
 
         Ok(())
 

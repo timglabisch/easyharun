@@ -10,7 +10,7 @@ use easyharun_lib::ContainerId;
 use crate::config::config_provider::config_get;
 use crate::container_manager::world::WorldContainer;
 use crate::docker::docker_world_builder::build_world_from_docker;
-use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed};
+use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
 use crate::health_check::http::health_check_http::{HealthCheckHttp, HealthCheckHttpHandle};
 
 pub struct HealthCheckHttpConfig {
@@ -94,6 +94,7 @@ impl HealthCheckManager {
 
         match msg {
             HealthCheckMsgRecv::CheckFailed(msg) => self.on_health_check_failed(msg).await?,
+            HealthCheckMsgRecv::CheckOk(msg) => self.on_health_check_ok(msg).await?,
         };
 
         Ok(())
@@ -101,6 +102,11 @@ impl HealthCheckManager {
 
     pub async fn on_health_check_failed(&self, msg : HealthCheckMsgRecvCheckFailed) -> Result<(), ::anyhow::Error> {
         info!("health check failed {:?}", msg);
+        Ok(())
+    }
+
+    pub async fn on_health_check_ok(&self, msg : HealthCheckMsgRecvCheckOk) -> Result<(), ::anyhow::Error> {
+        info!("health check ok {:?}", msg);
         Ok(())
     }
 
@@ -187,7 +193,7 @@ impl HealthCheckManager {
         let mut buf = vec![];
         for health_check_expected in world_container.health_checks.iter() {
             let health_check = self.build_health_check(
-                &world_container.container_id.clone().context("container must have a container id")?,
+                world_container,
                 health_check_expected.as_str(),
                 config,
             ).context("build health check")?;
@@ -201,11 +207,25 @@ impl HealthCheckManager {
         Ok(buf)
     }
 
-    pub fn build_health_check(&self, container_id: &ContainerId, health_check_name: &str, config: &Config) -> Result<HealthCheck, ::anyhow::Error> {
+    pub fn template_parse_world_container(template: &str, world_container: &WorldContainer) -> Result<String, ::anyhow::Error> {
+        Ok(
+            template
+            .replace("{{ ", "{{")
+            .replace(" }}", "}}")
+            .replace(
+                "{{container.port_dynamic_host}}",
+                world_container.container_port_dynamic_host.context("get container_port_dynamic_host")?.to_string().as_str()
+            )
+        )
+    }
+
+    pub fn build_health_check(&self, world_container: &WorldContainer, health_check_name: &str, config: &Config) -> Result<HealthCheck, ::anyhow::Error> {
         let config_health_check = match config.health_check.iter().find(|x| x.name == health_check_name) {
             Some(s) => s,
             None => return Err(anyhow!("could not find config for health_check {}", health_check_name))
         };
+
+        let container_id = &world_container.container_id.clone().context("container must have a container id")?;
 
         Ok(match config_health_check.check.as_str() {
             "http" => HealthCheck::Http(HealthCheckHttp::new(
@@ -213,7 +233,7 @@ impl HealthCheckManager {
                 self.sender.clone(),
                 HealthCheckHttpConfig {
                     container_id: container_id.clone(),
-                    url: config_health_check.url.to_string(),
+                    url: Self::template_parse_world_container(&config_health_check.url, world_container).context("template_parse_world_container")?,
                     timeout_ms: config_health_check.timeout_ms,
                 },
             )),

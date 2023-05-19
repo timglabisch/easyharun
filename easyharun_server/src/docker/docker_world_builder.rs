@@ -159,14 +159,6 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
         None => return Err(anyhow!("container without easyharun_container_port"))
     };
 
-    let container_port = match labels.get("easyharun_container_port") {
-        Some(s) => match s.parse::<u32>() {
-            Ok(k) => k,
-            Err(e) => return Err(anyhow!("invalid easyharun_container_port (not a number)"))
-        },
-        None => return Err(anyhow!("container without easyharun_container_port"))
-    };
-
     let health_checks = match labels.get("easyharun_health_checks") {
         Some(s) => s.split(",").map(|x|x.to_string()).collect::<Vec<_>>(),
         None => return Err(anyhow!("container without health_checks"))
@@ -177,6 +169,8 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
         None => return Err(anyhow!("container without proxies"))
     };
 
+    let container_port_dynamic_host = extract_dynamic_port_form_container(container_summary).context("could not extract container_dynamic_port_host")?;
+
     Ok(Some(
         WorldContainer {
             container_id: Some(container_id),
@@ -184,6 +178,7 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
             image,
             replica_id,
             container_port,
+            container_port_dynamic_host: Some(container_port_dynamic_host),
             health_checks,
             proxies
         }

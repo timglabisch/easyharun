@@ -83,6 +83,7 @@ impl World {
 #[derive(Debug, Clone, Default)]
 pub struct WorldContainer {
     pub container_id: Option<ContainerId>,
+    pub container_port_dynamic_host: Option<u32>,
     pub name: String,
     pub image: String,
     pub replica_id: u32,

@@ -72,8 +72,6 @@ impl ProxyManager {
                 }
             };
 
-            let container_dynamic_port = extract_dynamic_port_form_container(container).context("extract ports")?;
-
             let config_proxy = {
                 // todo, support multiple proxies?
                 let proxy_name = match container_world.proxies.first() {
@@ -92,9 +90,17 @@ impl ProxyManager {
                 }
             };
 
+            let container_port_dynamic_host = match container_world.container_port_dynamic_host {
+                Some(s) => s,
+                None => {
+                    warn!("Container {:?} has no port_dynamic_host, should not happen. ", container_id);
+                    continue;
+                }
+            };
+
             let portmapping = PortMapping {
                 listen_addr: config_proxy.listen.to_string(),
-                server_addr: format!("127.0.0.1:{}", container_dynamic_port),
+                server_addr: format!("127.0.0.1:{}", container_port_dynamic_host),
             };
 
             match proxies.entry(portmapping.listen_addr.to_string()) {

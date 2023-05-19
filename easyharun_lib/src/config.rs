@@ -50,6 +50,7 @@ pub struct Config {
 }
 
 impl Config {
+
     pub async fn read_from_file(file : &str) -> Result<Self, ::anyhow::Error> {
         let contents = ::tokio::fs::read(file).await.context(format!("reading file {}", &file))?;
 

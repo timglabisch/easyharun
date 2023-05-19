@@ -10,6 +10,7 @@ pub async fn build_world_from_config() -> Result<World, ::anyhow::Error> {
     for config_container in config.container.iter() {
         containers.push(WorldContainer {
             container_id: None,
+            container_port_dynamic_host: None,
             name: config_container.name.clone(),
             image: config_container.image.clone(),
             replica_id: config_container.replica_id.clone(),
