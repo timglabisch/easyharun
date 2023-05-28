@@ -7,6 +7,7 @@ use futures::future::select_all;
 use futures::select;
 use pin_project_lite::pin_project;
 use tokio_util::sync::CancellationToken;
+use tracing::trace;
 
 #[async_trait]
 pub trait Actor
@@ -22,11 +23,26 @@ pub struct ActorParent {
     cancellation_token: CancellationToken,
 }
 
+pub struct ActorMsgPingResponse {
+    id: usize,
+}
+
+pub struct ActorMsgPingRequest {
+    oneshot: ::tokio::sync::oneshot::Sender<ActorMsgPingResponse>,
+    id: usize,
+}
+
+enum ActorMsg<T> {
+    MSG(T),
+    KILL,
+    PING(ActorMsgPingRequest),
+}
+
 pin_project! {
     pub struct ActorWrapper<ACTOR : Actor>
     {
         #[pin]
-        pub inbox: ::tokio::sync::mpsc::UnboundedReceiver<ACTOR::MSG>,
+        pub inbox: ::tokio::sync::mpsc::UnboundedReceiver<ActorMsg<ACTOR::MSG>>,
         pub shutdown: bool,
         pub parent: Option<ActorParent>,
         pub actor: ACTOR,
@@ -35,7 +51,7 @@ pin_project! {
 
 impl<ACTOR> Future for ActorWrapper<ACTOR> where ACTOR: Actor + Send
 {
-    type Output = Option<ACTOR::MSG>;
+    type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
 
@@ -46,24 +62,35 @@ impl<ACTOR> Future for ActorWrapper<ACTOR> where ACTOR: Actor + Send
         match inbox.poll_recv(cx) {
             Poll::Pending => {},
             Poll::Ready(r) => {
-                match r {
-                    None => {},
-                    Some(r) => {
-                        let mut on_msg = actor.on_msg(r);
-                        Pin::new(&mut on_msg).poll(cx);
+                let msg = match r {
+                    None => return Poll::Ready(None),
+                    Some(r) => r
+                };
+
+                match msg {
+                    ActorMsg::KILL => {
+                        return Poll::Ready(())
+                    },
+                    ActorMsg::PING(ping_response) => {
+                        match ping_response.oneshot.send(ActorMsgPingResponse {
+                            id: ping_response.id
+                        }) {
+                            Ok(_) => {},
+                            Err(e) => {
+                                trace!("could not send ping response.")
+                            }
+                        }
+                    },
+                    ActorMsg::MSG(generic_msg) => {
+                        let mut on_msg = actor.on_msg(generic_msg);
+                        let poll = Pin::new(&mut on_msg).poll(cx);
+
+                        
                     }
                 }
             }
         };
 
         Poll::Pending
-    }
-}
-
-impl<ACTOR> ActorWrapper<ACTOR>
-    where ACTOR : Actor + Send,
-{
-    pub fn on_msg(msg: Option<ACTOR::MSG>) {
-
     }
 }
