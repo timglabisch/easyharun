@@ -1,4 +1,5 @@
 use std::future::{Future, poll_fn};
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::thread::sleep;
@@ -14,7 +15,7 @@ pub trait Actor
 {
     type MSG : Sized + Send;
 
-    async fn on_msg(&mut self, msg : Self::MSG) {
+    async fn on_msg(&mut self) {
         ()
     }
 }
@@ -32,38 +33,49 @@ pub struct ActorMsgPingRequest {
     id: usize,
 }
 
-enum ActorMsg<T> {
+pub enum ActorMsg<T> {
     MSG(T),
     KILL,
     PING(ActorMsgPingRequest),
 }
 
-pin_project! {
-    pub struct ActorWrapper<ACTOR : Actor>
+    pub struct ActorWrapper<ACTOR>
+    where ACTOR : Actor,
     {
-        #[pin]
         pub inbox: ::tokio::sync::mpsc::UnboundedReceiver<ActorMsg<ACTOR::MSG>>,
         pub shutdown: bool,
         pub parent: Option<ActorParent>,
         pub actor: ACTOR,
+        pub future_drive_onmsg: Option<Pin<Box<dyn Future<Output = ()> + Send>>>,
     }
-}
 
-impl<ACTOR> Future for ActorWrapper<ACTOR> where ACTOR: Actor + Send
+
+impl<'a, ACTOR> Future for ActorWrapper<ACTOR>
+    where ACTOR: Actor + Send + Unpin
 {
     type Output = ();
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output>
+    {
+        //let mut this = self.project();
+        // let mut inbox = this.inbox;
+        // let actor = this.actor;
 
-        let mut this = self.project();
-        let mut inbox = this.inbox;
-        let actor = this.actor;
+        // let this = self.as_mut();
 
-        match inbox.poll_recv(cx) {
+        let this = Pin::get_mut(self);
+
+        /*
+        match self.future_drive_onmsg.take() {
+
+        }
+         */
+
+        match this.inbox.poll_recv(cx) {
             Poll::Pending => {},
             Poll::Ready(r) => {
                 let msg = match r {
-                    None => return Poll::Ready(None),
+                    None => return Poll::Ready(()),
                     Some(r) => r
                 };
 
@@ -82,10 +94,11 @@ impl<ACTOR> Future for ActorWrapper<ACTOR> where ACTOR: Actor + Send
                         }
                     },
                     ActorMsg::MSG(generic_msg) => {
-                        let mut on_msg = actor.on_msg(generic_msg);
-                        let poll = Pin::new(&mut on_msg).poll(cx);
 
-                        
+                        let on_msg = this.actor.on_msg();
+                        this.future_drive_onmsg.insert(on_msg);
+
+                        // let poll = Pin::new(&mut on_msg).poll(cx);
                     }
                 }
             }
