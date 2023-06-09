@@ -7,6 +7,7 @@ use pin_project_lite::pin_project;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::channel;
 use tokio::sync::oneshot::{Sender};
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
@@ -97,10 +98,24 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
 
 
 #[async_trait]
-pub trait Actor{
+pub trait Actor: Sized + Send + Sync + 'static {
     type MSG: Send + Sync + Sized + Unpin + Debug;
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
+
+    fn spawn_as_actor<F>(func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>)
+        where F: FnOnce(ActorState<Self::MSG>) -> Self {
+
+        let (handle, actor_state) = ActorState::new_root("ActorA");
+
+        let mut this = func(actor_state);
+
+        let jh = ::tokio::task::Builder::new().name("foo").spawn(async move {
+            this.run_loop().await
+        }).expect("..");
+
+        (jh, handle)
+    }
 
     async fn run_loop_inner(&mut self) -> Result<(), ::anyhow::Error> {
 
