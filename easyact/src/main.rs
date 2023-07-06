@@ -4,7 +4,8 @@
 use futures::future::join;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
-use crate::actor::wrapper::{Actor, ActorState, ActorStateHandle};
+use async_trait::async_trait;
+use crate::actor::Actor::{Actor, ActorState, ActorStateHandle};
 
 pub mod actor;
 
@@ -12,22 +13,33 @@ struct ActorA {
     actor_state: ActorState<String>
 }
 
-
+#[async_trait]
 impl Actor for ActorA {
     type MSG = String;
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG> {
         &mut self.actor_state
     }
+
+    async fn on_msg(&mut self, msg: Self::MSG) -> Result<(), ::anyhow::Error> {
+        println!("got message");
+
+        Ok(())
+    }
 }
 
 #[tokio::main]
 pub async fn main() {
 
-    console_subscriber::init();
+    // console_subscriber::init();
 
-    let (jh_1, state_a) = Actor::spawn_as_actor(|actor_state| ActorA {actor_state} );
-    let (jh_2, state_b) = Actor::spawn_as_actor(|actor_state| ActorA {actor_state} );
+    let (jh_1, handle_a) = Actor::spawn("Actor A", "Foo", |actor_state| ActorA {actor_state} );
+    let (jh_2, handle_b) = Actor::spawn("Actor B", "Foo", |actor_state| ActorA {actor_state} );
+
+
+    println!("{:#?}", handle_a.shutdown().await);
+
+    // handle_a.
 
     join(jh_1, jh_2).await;
 }
