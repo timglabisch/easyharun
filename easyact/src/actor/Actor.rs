@@ -69,7 +69,8 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
 
 pub struct ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     id: ActorId,
-    sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>
+    sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>,
+    cancellation_token_self: CancellationToken,
 }
 
 impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
@@ -77,6 +78,7 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Un
         Self {
             id: self.id.clone(),
             sender: self.sender.clone(),
+            cancellation_token_self: self.cancellation_token_self.clone(),
         }
     }
 }
@@ -84,6 +86,10 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Un
 impl<MSG> ActorStateHandle<MSG> where MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
     pub async fn send(&self, msg : MSG) -> Result<(), SendError<ActorMsg<MSG>>> {
         self.sender.send(ActorMsg::Msg(msg)).await
+    }
+
+    pub fn get_cancellation_token(&self) -> CancellationToken {
+        self.cancellation_token_self.clone()
     }
 
     pub async fn ping(&self) -> Result<ActorMsgPingResponse, ::anyhow::Error> where MSG: Debug {
@@ -114,14 +120,15 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     pub fn new_root(
         name: String,
         actor_type: String,
+        cancellation_tokens: Vec<CancellationToken>,
     ) -> (ActorStateHandle<MSG>, Self) {
-        Self::new(name, actor_type, None)
+        Self::new(name, actor_type, cancellation_tokens)
     }
 
     fn new(
         name: String,
         actor_type: String,
-        parent_cancellation_token: Option<CancellationToken>
+        cancellation_tokens: Vec<CancellationToken>
     ) -> (ActorStateHandle<MSG>, Self) {
 
         let (inbox_sender, inbox) = channel::<ActorMsg<MSG>>(1000);
@@ -130,12 +137,14 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
 
         println!("id {}", id);
 
+        let cancellation_token_self = CancellationToken::new();
+
         let s = Self {
             id: id.clone(),
-            cancellation_token_self: CancellationToken::new(),
+            cancellation_token_self: cancellation_token_self.clone(),
             metrics: ActorStateMetrics::default(),
             inbox: Some(inbox),
-            cancellation_tokens_others: vec![],
+            cancellation_tokens_others: cancellation_tokens,
             name,
             actor_type,
             shutdown: false,
@@ -145,7 +154,8 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
         (
             ActorStateHandle {
                 id: id,
-                sender: inbox_sender
+                sender: inbox_sender,
+                cancellation_token_self
             },
             s
         )
@@ -159,13 +169,14 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
 
-    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
+    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, cancellation_tokens: Vec<CancellationToken>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
         where F: FnOnce(ActorState<Self::MSG>) -> Self,
         N : AsRef<str> {
 
         let (handle, actor_state) = ActorState::new_root(
             actor_name.as_ref().to_string(),
-            actor_type.as_ref().to_string()
+            actor_type.as_ref().to_string(),
+            cancellation_tokens
         );
 
         let (ready_shot_s, ready_shot_r) = ::tokio::sync::oneshot::channel();
@@ -213,6 +224,8 @@ pub trait Actor: Sized + Send + Sync + 'static {
                 }
             }
 
+
+            this.get_actor_state().cancellation_token_self.cancel();
             res
         });
 
@@ -224,6 +237,8 @@ pub trait Actor: Sized + Send + Sync + 'static {
         let cancellation_tokens_others = self.get_actor_state().cancellation_tokens_others.clone();
         let mut cancellations = cancellation_tokens_others.iter().map(|v| Box::pin(v.cancelled())).collect::<Vec<_>>();
         let mut inbox = self.get_actor_state().inbox.take().expect("expect inbox");
+
+        println!("yay? {}", cancellations.len() > 0);
 
         loop {
             ::tokio::select! {

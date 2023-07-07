@@ -16,7 +16,7 @@ pub struct ActorRegistry {
 
 impl ActorRegistry {
     pub fn spawn_new() -> (JoinHandle<()>, ActorRegistry) {
-        let (jh, handle, _) = Actor::spawn("Registry", "Registry", None, |actor_state| ActorRegistryActor {
+        let (jh, handle, _) = Actor::spawn("Registry", "Registry", None, vec![], |actor_state| ActorRegistryActor {
             actors: HashMap::new(),
             actor_state
         });

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::time::Duration;
 use anyhow::Context;
 use futures::future::join;
 use tokio::task::JoinHandle;
@@ -12,7 +13,7 @@ use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryActor};
 pub mod actor;
 
 struct ActorA {
-    actor_state: ActorState<String>
+    actor_state: ActorState<String>,
 }
 
 #[async_trait]
@@ -38,14 +39,18 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
     let (registry_jh, registry) = ActorRegistry::spawn_new();
 
 
-    let (jh_1, handle_a, ready_1) = Actor::spawn("Actor A", "Foo", Some(registry.clone()),|actor_state| ActorA {actor_state} );
-    let (jh_2, handle_b, ready_2) = Actor::spawn("Actor B", "Foo", Some(registry.clone()), |actor_state| ActorA {actor_state} );
+    let (jh_1, handle_a, ready_1) = Actor::spawn("Actor A", "Foo", Some(registry.clone()), vec![], |actor_state| ActorA { actor_state });
+    let (jh_2, handle_b, ready_2) = Actor::spawn("Actor B", "Foo", Some(registry.clone()), vec![handle_a.get_cancellation_token()], |actor_state| ActorA { actor_state });
 
 
-    println!("{:#?}", handle_a.shutdown().await?.await);
+    //println!("{:#?}", );
+
+    handle_a.shutdown().await?.await;
 
     ready_1.await;
     ready_2.await;
+
+    ::tokio::time::sleep(Duration::from_secs(1)).await;
 
 
     println!("{:#?}", registry.get_running_actors().await);
