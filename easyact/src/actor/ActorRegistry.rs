@@ -4,9 +4,10 @@ use std::collections::HashMap;
 use std::fmt::{Debug};
 use std::sync::atomic::{Ordering};
 use async_trait::async_trait;
+use tokio::sync::mpsc::error::SendError;
 use tokio::task::JoinHandle;
 use tracing::warn;
-use crate::actor::Actor::{Actor, ActorId, ActorState, ActorStateHandle};
+use crate::actor::Actor::{Actor, ActorId, ActorMsg, ActorState, ActorStateHandle};
 
 pub struct ActorRegistry {
     inner: ActorStateHandle<ActorRegistryMsg>,
@@ -27,6 +28,10 @@ impl ActorRegistry {
             inner: self.inner.clone(),
         }
     }
+
+    pub async fn send(&self, msg : ActorRegistryMsg) -> Result<(), SendError<ActorMsg<ActorRegistryMsg>>> {
+        self.inner.send(msg).await
+    }
 }
 
 pub struct ActorRegistryActor {
@@ -43,14 +48,14 @@ pub struct ActorRegistryEntry {
 
 #[derive(Debug)]
 pub struct ActorRegistryMsgRegister {
-    actor_id: ActorId,
-    actor_name: String,
-    actor_type: String,
+    pub actor_id: ActorId,
+    pub actor_name: String,
+    pub actor_type: String,
 }
 
 #[derive(Debug)]
 pub struct ActorRegistryMsgUnregister {
-    actor_id: ActorId,
+    pub actor_id: ActorId,
 }
 
 #[derive(Debug)]

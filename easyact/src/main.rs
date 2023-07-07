@@ -39,9 +39,11 @@ pub async fn main() {
 
     let (jh_1, handle_a) = Actor::spawn("Actor A", "Foo", Some(registry.clone()),|actor_state| ActorA {actor_state} );
     let (jh_2, handle_b) = Actor::spawn("Actor B", "Foo", Some(registry.clone()), |actor_state| ActorA {actor_state} );
-    
+
 
     println!("{:#?}", handle_a.shutdown().await);
+
+
 
     // handle_a.
 

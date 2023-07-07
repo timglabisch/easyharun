@@ -11,7 +11,7 @@ use tokio::sync::oneshot::{Sender};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
-use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg};
+use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, ActorRegistryMsgUnregister};
 
 const ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
 
@@ -158,7 +158,33 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
         let mut this = func(actor_state);
         let jh = ::tokio::spawn(async move {
-            this.run_loop().await
+            if let Some(ref r) = registry {
+                match r.send(ActorRegistryMsg::Register(ActorRegistryMsgRegister {
+                    actor_id: this.get_actor_state().id.clone(),
+                    actor_name: this.get_actor_state().name.clone(),
+                    actor_type: this.get_actor_state().actor_type.clone(),
+                })).await {
+                    Ok(_) => {},
+                    Err(e) => {
+                        warn!("could not send registry that actor {} was registered", this.get_actor_state().name)
+                    }
+                };
+            };
+
+            let res = this.run_loop().await;
+
+            if let Some(ref r) = registry {
+                match r.send(ActorRegistryMsg::Unregister(ActorRegistryMsgUnregister {
+                    actor_id: this.get_actor_state().id.clone(),
+                })).await {
+                    Ok(_) => {},
+                    Err(e) => {
+                        warn!("could not send registry that actor {} was unregistered", this.get_actor_state().name)
+                    }
+                }
+            };
+
+            res
         });
 
         (jh, handle)
