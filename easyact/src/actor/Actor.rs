@@ -55,6 +55,7 @@ pub struct ActorStateMetrics {
 }
 
 
+#[derive(Debug)]
 pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     id: ActorId,
     name: String,
@@ -162,6 +163,57 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     }
 }
 
+pub struct ActorConfig {
+    actor_name: String,
+    actor_type: String,
+    registry: Option<ActorRegistry>,
+    cancellation_tokens: Vec<CancellationToken>,
+}
+
+pub struct ActorConfigBuilder {
+    actor_name: String,
+    actor_type: String,
+    registry: Option<ActorRegistry>,
+    cancellation_tokens: Vec<CancellationToken>,
+}
+
+impl ActorConfigBuilder {
+
+    pub fn registry(mut self, registry: &ActorRegistry) -> Self {
+        self.registry = Some(registry.clone());
+        self
+    }
+
+    pub fn cancel_on_token(mut self, token : CancellationToken) -> Self {
+        self.cancellation_tokens.push(token);
+        self
+    }
+
+    pub fn cancel_on_actor<MSG>(mut self, actor_state_handle: &ActorStateHandle<MSG>) -> Self where MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
+        self.cancellation_tokens.push(actor_state_handle.get_cancellation_token().clone());
+        self
+    }
+
+    pub fn build(self) -> ActorConfig {
+        ActorConfig {
+            actor_name: self.actor_name,
+            actor_type: self.actor_type,
+            registry: self.registry,
+            cancellation_tokens: self.cancellation_tokens,
+        }
+    }
+}
+
+impl ActorConfig {
+    pub fn new<N>(actor_name : N, actor_type : N) -> ActorConfigBuilder where N : AsRef<str> {
+        ActorConfigBuilder {
+            actor_name: actor_name.as_ref().to_string(),
+            actor_type: actor_type.as_ref().to_string(),
+            registry: None,
+            cancellation_tokens: vec![],
+        }
+    }
+}
 
 #[async_trait]
 pub trait Actor: Sized + Send + Sync + 'static {
@@ -169,14 +221,13 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
 
-    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, cancellation_tokens: Vec<CancellationToken>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
-        where F: FnOnce(ActorState<Self::MSG>) -> Self,
-        N : AsRef<str> {
-
+    fn spawn<F>(actor_config : ActorConfig, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
+        where F: FnOnce(ActorState<Self::MSG>) -> Self
+    {
         let (handle, actor_state) = ActorState::new_root(
-            actor_name.as_ref().to_string(),
-            actor_type.as_ref().to_string(),
-            cancellation_tokens
+            actor_config.actor_name,
+            actor_config.actor_type,
+            actor_config.cancellation_tokens
         );
 
         let (ready_shot_s, ready_shot_r) = ::tokio::sync::oneshot::channel();
@@ -185,7 +236,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
         let mut this = func(actor_state);
         let jh = ::tokio::spawn(async move {
-            if let Some(ref r) = registry {
+            if let Some(ref r) = actor_config.registry {
                 match r.send(ActorRegistryMsg::Register(ActorRegistryMsgRegister {
                     actor_id: this.get_actor_state().id.clone(),
                     actor_name: this.get_actor_state().name.clone(),
@@ -205,7 +256,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
             let res = this.run_loop().await;
 
-            if let Some(ref r) = registry {
+            if let Some(ref r) = actor_config.registry {
                 match r.send(ActorRegistryMsg::Unregister(ActorRegistryMsgUnregister {
                     actor_id: this.get_actor_state().id.clone(),
                 })).await {

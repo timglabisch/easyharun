@@ -7,8 +7,9 @@ use futures::future::join;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 use async_trait::async_trait;
-use crate::actor::Actor::{Actor, ActorState, ActorStateHandle};
+use crate::actor::Actor::{Actor, ActorConfig, ActorState, ActorStateHandle};
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryActor};
+use crate::actor::CancellationTokenRegistry::CancellationTokenRegistry;
 
 pub mod actor;
 
@@ -36,11 +37,15 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
     // console_subscriber::init();
 
-    let (registry_jh, registry) = ActorRegistry::spawn_new();
+    let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
+
+    let (a, registry_cancellation) = CancellationTokenRegistry::spawn_new();
+
+    let token = registry_cancellation.create_or_get_token("foo").await;
 
 
-    let (jh_1, handle_a, ready_1) = Actor::spawn("Actor A", "Foo", Some(registry.clone()), vec![], |actor_state| ActorA { actor_state });
-    let (jh_2, handle_b, ready_2) = Actor::spawn("Actor B", "Foo", Some(registry.clone()), vec![handle_a.get_cancellation_token()], |actor_state| ActorA { actor_state });
+    let (jh_1, handle_a, ready_1) = Actor::spawn(ActorConfig::new("Actor A", "Foo").registry(&registry_actor).build(), |actor_state| ActorA { actor_state });
+    let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").registry(&registry_actor).cancel_on_actor(&handle_a).build(), |actor_state| ActorA { actor_state });
 
 
     //println!("{:#?}", );
@@ -53,7 +58,7 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
     ::tokio::time::sleep(Duration::from_secs(1)).await;
 
 
-    println!("{:#?}", registry.get_running_actors().await);
+    println!("{:#?}", registry_actor.get_running_actors().await);
 
     // handle_a.
 

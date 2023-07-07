@@ -8,7 +8,7 @@ use tokio::sync::mpsc::error::SendError;
 use tokio::sync::oneshot::error::RecvError;
 use tokio::task::JoinHandle;
 use tracing::warn;
-use crate::actor::Actor::{Actor, ActorId, ActorMsg, ActorState, ActorStateHandle};
+use crate::actor::Actor::{Actor, ActorConfig, ActorId, ActorMsg, ActorState, ActorStateHandle};
 
 pub struct ActorRegistry {
     inner: ActorStateHandle<ActorRegistryMsg>,
@@ -16,7 +16,7 @@ pub struct ActorRegistry {
 
 impl ActorRegistry {
     pub fn spawn_new() -> (JoinHandle<()>, ActorRegistry) {
-        let (jh, handle, _) = Actor::spawn("Registry", "Registry", None, vec![], |actor_state| ActorRegistryActor {
+        let (jh, handle, _) = Actor::spawn(ActorConfig::new("Registry", "Registry").build(), |actor_state| ActorRegistryActor {
             actors: HashMap::new(),
             actor_state
         });
