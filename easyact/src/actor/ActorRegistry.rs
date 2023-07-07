@@ -5,6 +5,7 @@ use std::fmt::{Debug};
 use std::sync::atomic::{Ordering};
 use async_trait::async_trait;
 use tokio::sync::mpsc::error::SendError;
+use tokio::sync::oneshot::error::RecvError;
 use tokio::task::JoinHandle;
 use tracing::warn;
 use crate::actor::Actor::{Actor, ActorId, ActorMsg, ActorState, ActorStateHandle};
@@ -15,7 +16,7 @@ pub struct ActorRegistry {
 
 impl ActorRegistry {
     pub fn spawn_new() -> (JoinHandle<()>, ActorRegistry) {
-        let (jh, handle) = Actor::spawn("Registry", "Registry", None, |actor_state| ActorRegistryActor {
+        let (jh, handle, _) = Actor::spawn("Registry", "Registry", None, |actor_state| ActorRegistryActor {
             actors: HashMap::new(),
             actor_state
         });
@@ -27,6 +28,17 @@ impl ActorRegistry {
         Self {
             inner: self.inner.clone(),
         }
+    }
+
+    pub async fn get_running_actors(&self) -> Result<HashMap<ActorId, ActorRegistryEntry>, ::anyhow::Error> {
+
+        let (s, r) = ::tokio::sync::oneshot::channel();
+
+        self.send(ActorRegistryMsg::GetRunningActors(ActorRegistryMsgGetRunningActors {
+            shot: s,
+        })).await?;
+
+        Ok(r.await?)
     }
 
     pub async fn send(&self, msg : ActorRegistryMsg) -> Result<(), SendError<ActorMsg<ActorRegistryMsg>>> {

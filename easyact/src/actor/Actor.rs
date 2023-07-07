@@ -13,7 +13,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, ActorRegistryMsgUnregister};
 
-const ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
+static ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ActorId(pub u64);
@@ -31,6 +31,11 @@ pub struct ActorMsgPing {
 }
 
 #[derive(Debug)]
+pub struct ActorMsgShutdown {
+    notify: Option<Sender<()>>,
+}
+
+#[derive(Debug)]
 pub struct ActorMsgPingResponse {
     actor_id: ActorId,
 }
@@ -39,7 +44,7 @@ pub struct ActorMsgPingResponse {
 pub enum ActorMsg<MSG> {
     Msg(MSG),
     Ping(ActorMsgPing),
-    Shutdown()
+    Shutdown(ActorMsgShutdown)
 }
 
 #[derive(Debug, Default)]
@@ -59,6 +64,7 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     inbox: Option<Receiver<ActorMsg<MSG>>>,
     metrics: ActorStateMetrics,
     shutdown: bool,
+    shutdown_notify: Vec<::tokio::sync::oneshot::Sender<()>>
 }
 
 pub struct ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
@@ -93,8 +99,13 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send + 'static, MSG : Sync, MSG: Size
         Ok(r.await?)
     }
 
-    pub async fn shutdown(&self) -> Result<(), ::anyhow::Error> where MSG: Debug {
-        Ok(self.sender.send(ActorMsg::Shutdown()).await?)
+    pub async fn shutdown(&self) -> Result<::tokio::sync::oneshot::Receiver<()>, ::anyhow::Error> where MSG: Debug {
+
+        let (s, r) = ::tokio::sync::oneshot::channel();
+
+        let res = self.sender.send(ActorMsg::Shutdown(ActorMsgShutdown {notify: Some(s)})).await?;
+
+        Ok(r)
     }
 }
 
@@ -117,6 +128,8 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
 
         let id = ActorId(ACTOR_ID_GEN.fetch_add(1, Ordering::Relaxed));
 
+        println!("id {}", id);
+
         let s = Self {
             id: id.clone(),
             cancellation_token_self: CancellationToken::new(),
@@ -125,7 +138,8 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
             cancellation_tokens_others: vec![],
             name,
             actor_type,
-            shutdown: false
+            shutdown: false,
+            shutdown_notify: vec![],
         };
 
         (
@@ -145,7 +159,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
 
-    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>)
+    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
         where F: FnOnce(ActorState<Self::MSG>) -> Self,
         N : AsRef<str> {
 
@@ -153,6 +167,8 @@ pub trait Actor: Sized + Send + Sync + 'static {
             actor_name.as_ref().to_string(),
             actor_type.as_ref().to_string()
         );
+
+        let (ready_shot_s, ready_shot_r) = ::tokio::sync::oneshot::channel();
 
         let name = format!("Actor {}", actor_state.name);
 
@@ -171,6 +187,11 @@ pub trait Actor: Sized + Send + Sync + 'static {
                 };
             };
 
+            match ready_shot_s.send(()) {
+                Ok(_) => {},
+                Err(_) => {}
+            };
+
             let res = this.run_loop().await;
 
             if let Some(ref r) = registry {
@@ -184,10 +205,18 @@ pub trait Actor: Sized + Send + Sync + 'static {
                 }
             };
 
+            for notify_shutdown in this.get_actor_state().shutdown_notify.drain(..) {
+                // we ignore errors for now.
+                match notify_shutdown.send(()) {
+                    Ok(_) => {},
+                    Err(e) => {}
+                }
+            }
+
             res
         });
 
-        (jh, handle)
+        (jh, handle, ready_shot_r)
     }
 
     async fn run_loop_inner(&mut self) -> Result<(), ::anyhow::Error> {
@@ -232,8 +261,11 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
                 Ok(())
             },
-            ActorMsg::Shutdown() => {
+            ActorMsg::Shutdown(msg) => {
                 self.get_actor_state().shutdown = true;
+                if let Some(notify) = msg.notify {
+                    self.get_actor_state().shutdown_notify.push(notify);
+                }
                 Ok(())
             }
         }
