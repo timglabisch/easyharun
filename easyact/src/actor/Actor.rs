@@ -11,10 +11,11 @@ use tokio::sync::oneshot::{Sender};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
+use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg};
 
 const ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ActorId(pub u64);
 
 impl Display for ActorId {
@@ -63,6 +64,15 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
 pub struct ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     id: ActorId,
     sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>
+}
+
+impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
+    pub fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            sender: self.sender.clone(),
+        }
+    }
 }
 
 impl<MSG> ActorStateHandle<MSG> where MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
@@ -135,7 +145,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
 
-    fn spawn<N, F>(actor_name: N, actor_type: N, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>)
+    fn spawn<N, F>(actor_name: N, actor_type: N, registry: Option<ActorRegistry>, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>)
         where F: FnOnce(ActorState<Self::MSG>) -> Self,
         N : AsRef<str> {
 

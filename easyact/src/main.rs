@@ -6,6 +6,7 @@ use tokio::task::JoinHandle;
 use tracing::Instrument;
 use async_trait::async_trait;
 use crate::actor::Actor::{Actor, ActorState, ActorStateHandle};
+use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryActor};
 
 pub mod actor;
 
@@ -33,9 +34,12 @@ pub async fn main() {
 
     // console_subscriber::init();
 
-    let (jh_1, handle_a) = Actor::spawn("Actor A", "Foo", |actor_state| ActorA {actor_state} );
-    let (jh_2, handle_b) = Actor::spawn("Actor B", "Foo", |actor_state| ActorA {actor_state} );
+    let (registry_jh, registry) = ActorRegistry::spawn_new();
 
+
+    let (jh_1, handle_a) = Actor::spawn("Actor A", "Foo", Some(registry.clone()),|actor_state| ActorA {actor_state} );
+    let (jh_2, handle_b) = Actor::spawn("Actor B", "Foo", Some(registry.clone()), |actor_state| ActorA {actor_state} );
+    
 
     println!("{:#?}", handle_a.shutdown().await);
 
