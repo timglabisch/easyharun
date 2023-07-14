@@ -51,12 +51,12 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
     //println!("{:#?}", );
 
-    handle_a.shutdown().await?.await;
+    // handle_a.shutdown().await?.await;
 
     ready_1.await;
     ready_2.await;
 
-    ::tokio::time::sleep(Duration::from_secs(1)).await;
+    // ::tokio::time::sleep(Duration::from_secs(1)).await;
 
 
     println!("{:#?}", registry_actor.get_running_actors().await);

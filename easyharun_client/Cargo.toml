@@ -1,7 +1,0 @@
-[package]
-name = "easyharun_client"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-easyharun_lib = {path = "./../easyharun_lib"}

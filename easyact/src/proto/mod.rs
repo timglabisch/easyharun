@@ -1,4 +1,7 @@
 use tonic::{Request, Response, Status, transport::Server};
+use tonic_web::GrpcWebLayer;
+use tower_http::cors::{Any, CorsLayer};
+
 
 use crate::actor::ActorRegistry::ActorRegistry;
 
@@ -11,13 +14,26 @@ pub mod proto_actor {
 pub mod service_actor;
 
 pub async fn grpc_server_run(actor_registry: ActorRegistry) -> Result<(), ::anyhow::Error> {
-    let addr = "[::1]:50051".parse()?;
+    let addr = "0.0.0.0:50051".parse()?;
     let grpc_service = GrpcServiceActor::new(actor_registry);
 
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+
+    println!("start");
+
     Server::builder()
-        .add_service(ActorServiceServer::new(grpc_service))
+        .accept_http1(true)
+        .layer(cors)
+        .add_service(::tonic_web::enable(ActorServiceServer::new(grpc_service)))
         .serve(addr)
         .await?;
+
+    println!("failed");
 
     Ok(())
 }

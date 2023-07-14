@@ -2,7 +2,7 @@
 
 members = [
     "easyharun_server",
-    "easyharun_client",
     "easyharun_lib",
+    "easyharun_web",
     "easyact"
 ]
