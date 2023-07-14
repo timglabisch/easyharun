@@ -10,6 +10,7 @@ use tokio::task::JoinHandle;
 use tracing::warn;
 use crate::actor::Actor::{Actor, ActorConfig, ActorId, ActorMsg, ActorState, ActorStateHandle};
 
+#[derive(Debug)]
 pub struct ActorRegistry {
     inner: ActorStateHandle<ActorRegistryMsg>,
 }
@@ -53,9 +54,9 @@ pub struct ActorRegistryActor {
 
 #[derive(Debug, Clone)]
 pub struct ActorRegistryEntry {
-    actor_id: ActorId,
-    actor_name: String,
-    actor_type: String,
+    pub actor_id: ActorId,
+    pub actor_name: String,
+    pub actor_type: String,
 }
 
 #[derive(Debug)]

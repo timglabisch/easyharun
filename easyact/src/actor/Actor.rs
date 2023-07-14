@@ -68,6 +68,7 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     shutdown_notify: Vec<::tokio::sync::oneshot::Sender<()>>
 }
 
+#[derive(Debug)]
 pub struct ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     id: ActorId,
     sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>,

@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 use anyhow::Context;
-use futures::future::join;
+use futures::future::{join, join3};
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 use async_trait::async_trait;
@@ -12,6 +12,7 @@ use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryActor};
 use crate::actor::CancellationTokenRegistry::CancellationTokenRegistry;
 
 pub mod actor;
+pub mod proto;
 
 struct ActorA {
     actor_state: ActorState<String>,
@@ -62,7 +63,7 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
     // handle_a.
 
-    join(jh_1, jh_2).await;
+    join3(jh_1, jh_2, proto::grpc_server_run(registry_actor)).await;
 
     Ok(())
 }

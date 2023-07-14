@@ -1,0 +1,30 @@
+syntax = "proto3";
+package proto_actor;
+
+service ActorService {
+  // Our SayHello rpc accepts HelloRequests and returns HelloReplies
+  rpc ping (PingRequest) returns (PingResponse);
+  rpc actors_running_get (ActorsRunningGetRequest) returns (ActorsRunningGetResponse);
+}
+
+message PingRequest {
+  string id = 1;
+}
+
+message PingResponse {
+  string id = 1;
+}
+
+message ActorsRunningGetRequest {
+
+}
+
+message ActorsRunningGetResponseItem {
+  string actor_id = 1;
+  string actor_name = 2;
+  string actor_type = 3;
+}
+
+message ActorsRunningGetResponse {
+  repeated ActorsRunningGetResponseItem items = 1;
+}
