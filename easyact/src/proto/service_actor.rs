@@ -44,7 +44,7 @@ impl ActorService for GrpcServiceActor {
         };
 
         Ok(Response::new(ActorsRunningGetResponse{
-            items: running_actors.iter().map(|(_, v)| ActorsRunningGetResponseItem {
+            items: running_actors.iter().map(|v| ActorsRunningGetResponseItem {
                 actor_id: v.actor_id.0.to_string(),
                 actor_name: v.actor_name.to_string(),
                 actor_type: v.actor_type.to_string(),

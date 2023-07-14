@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
+use anyhow::Error;
 use async_trait::async_trait;
 use futures::select;
 use pin_project_lite::pin_project;
@@ -82,6 +83,29 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Un
             sender: self.sender.clone(),
             cancellation_token_self: self.cancellation_token_self.clone(),
         }
+    }
+}
+
+#[async_trait]
+pub trait ActorStateHandleManageable {
+    async fn ping(&self) -> Result<ActorMsgPingResponse, ::anyhow::Error>;
+    async fn shutdown(&self) -> Result<::tokio::sync::oneshot::Receiver<()>, ::anyhow::Error>;
+}
+
+impl Debug for Box<dyn ActorStateHandleManageable + 'static + Send + Sync> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ActorStateHandleManageable{}")
+    }
+}
+
+#[async_trait]
+impl<MSG> ActorStateHandleManageable for ActorStateHandle<MSG> where MSG: Debug, MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
+    async fn ping(&self) -> Result<ActorMsgPingResponse, Error> {
+        self.ping().await
+    }
+
+    async fn shutdown(&self) -> Result<tokio::sync::oneshot::Receiver<()>, Error> {
+        self.shutdown().await
     }
 }
 
@@ -236,12 +260,14 @@ pub trait Actor: Sized + Send + Sync + 'static {
         let name = format!("Actor {}", actor_state.name);
 
         let mut this = func(actor_state);
+        let actor_handle_manage = Box::new(handle.clone());
         let jh = ::tokio::spawn(async move {
             if let Some(ref r) = actor_config.registry {
                 match r.send(ActorRegistryMsg::Register(ActorRegistryMsgRegister {
                     actor_id: this.get_actor_state().id.clone(),
                     actor_name: this.get_actor_state().name.clone(),
                     actor_type: this.get_actor_state().actor_type.clone(),
+                    actor_handle_manage
                 })).await {
                     Ok(_) => {},
                     Err(e) => {
