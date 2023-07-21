@@ -1,3 +1,4 @@
 **/target
 /target
 .idea/*
+easyharun_web/frontend/.vite/*
