@@ -43,9 +43,8 @@ pub async fn main() {
         ConfigMonitor::async_watch().await
     });
 
-    let jh_proxymanager = ::tokio::spawn(async move {
-        ProxyManager::new().run().await
-    });
+    let (jh_proxymanager, handle_proxymanager, _) = Actor::spawn(ActorConfig::new("ProxyManager", "Manager").build(), |actor_state| ProxyManager::new(actor_state));
+
 
     let (jh_containermanager, handle_containermanager, _) = Actor::spawn(ActorConfig::new("ContainerManager", "Manager").build(), |actor_state| ContainerManager { actor_state });
 

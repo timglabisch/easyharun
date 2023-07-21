@@ -1,9 +1,12 @@
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
-use anyhow::Context;
+use std::time::Duration;
+use anyhow::{Context, Error};
+use async_trait::async_trait;
 use bollard::container::ListContainersOptions;
 use tracing::{info, instrument, trace, warn};
+use easyact::{Actor, ActorState};
 use easyharun_lib::config::Config;
 
 use easyharun_lib::portmapping::{PortMapping};
@@ -19,7 +22,29 @@ use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 
 #[derive(Debug)]
 pub struct ProxyManager {
-    proxies: HashMap<String, ProxyHandle>
+    proxies: HashMap<String, ProxyHandle>,
+    actor_state: ActorState<()>,
+}
+
+#[async_trait]
+impl Actor for ProxyManager {
+    type MSG = ();
+
+    fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG> {
+        &mut self.actor_state
+    }
+
+    fn timer_duration(&self) -> Option<Duration> {
+        Some(::tokio::time::Duration::from_millis(500))
+    }
+
+    async fn on_timer(&mut self) -> Result<(), Error> {
+        self.run_inner().await
+    }
+
+    async fn on_msg(&mut self, msg: Self::MSG) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 impl ProxyManager {
@@ -125,25 +150,10 @@ impl ProxyManager {
         })
     }
 
-    pub fn new() -> Self {
+    pub fn new(actor_state: ActorState<()>) -> Self {
         Self {
+            actor_state,
             proxies: HashMap::new(),
-        }
-    }
-
-    #[tracing::instrument]
-    pub async fn run(&mut self) {
-        loop {
-            match self.run_inner().await {
-                Ok(_) => {},
-                Err(e) => {
-                    eprintln!("Proxy Manager Error: \n{:?}\n\n", e)
-                }
-            };
-
-            trace!("sleep");
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(500)).await;
-            trace!("/sleep");
         }
     }
 
