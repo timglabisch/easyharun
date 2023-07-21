@@ -16,7 +16,7 @@ use crate::config::ConfigMonitor;
 use crate::container_manager::ContainerManager;
 use crate::health_check::health_check_manager::HealthCheckManager;
 use crate::proxy::proxy_manager::ProxyManager;
-use easyact::{actor_run_grpc_server, ActorRegistry};
+use easyact::{Actor, actor_run_grpc_server, ActorConfig, ActorRegistry};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "example", about = "An example of StructOpt usage.")]
@@ -47,9 +47,8 @@ pub async fn main() {
         ProxyManager::new().run().await
     });
 
-    let jh_containermanager = ::tokio::spawn(async move {
-        ContainerManager::new().run().await
-    });
+
+    let (jh_containermanager, handle_containermanager, _) = Actor::spawn(ActorConfig::new("ContainerManager", "Manager").build(), |actor_state| ContainerManager { actor_state });
 
     let jh_healh_check_manager = ::tokio::spawn(async move {
         HealthCheckManager::new().run().await

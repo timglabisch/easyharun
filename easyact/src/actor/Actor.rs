@@ -1,8 +1,10 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 use anyhow::Error;
 use async_trait::async_trait;
+use futures::future::OptionFuture;
 use futures::select;
 use pin_project_lite::pin_project;
 use tokio::sync::mpsc::Receiver;
@@ -10,6 +12,7 @@ use tokio::sync::mpsc::channel;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::oneshot::{Sender};
 use tokio::task::JoinHandle;
+use tokio::time::{Instant, Sleep};
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 use crate::actor::ActorRegistry::DEFAULT_ACTOR_REGISTRY;
@@ -250,6 +253,14 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
     fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG>;
 
+    fn timer_duration(&self) -> Option<Duration> {
+        None
+    }
+
+    async fn on_timer(&mut self) -> Result<(), ::anyhow::Error> {
+        Ok(())
+    }
+
     fn spawn<F>(actor_config : ActorConfig, func: F) -> (JoinHandle<()>, ActorStateHandle<Self::MSG>, ::tokio::sync::oneshot::Receiver<()>)
         where F: FnOnce(ActorState<Self::MSG>) -> Self
     {
@@ -319,6 +330,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
         let cancellation_tokens_others = self.get_actor_state().cancellation_tokens_others.clone();
         let mut cancellations = cancellation_tokens_others.iter().map(|v| Box::pin(v.cancelled())).collect::<Vec<_>>();
         let mut inbox = self.get_actor_state().inbox.take().expect("expect inbox");
+        let mut timer_wakeup = Box::pin(OptionFuture::from(self.timer_duration().and_then(|x| Some(::tokio::time::sleep(x)) )));
 
         println!("yay? {}", cancellations.len() > 0);
 
@@ -338,6 +350,16 @@ pub trait Actor: Sized + Send + Sync + 'static {
                 _ = async { ::futures::future::select_all(&mut cancellations).await }, if cancellations.len() > 0 => {
                     println!("parent cancelled. we kill ourself");
                     return Ok(());
+                }
+                _ = &mut timer_wakeup => {
+                    match self.on_timer().await {
+                        Ok(_) => {},
+                        Err(e) => {
+                            eprint!("oh no! #2 {:?}", e);
+                        }
+                    }
+                    // reset the timer.
+                    timer_wakeup = Box::pin(OptionFuture::from(self.timer_duration().and_then(|x| Some(::tokio::time::sleep(x)) )));
                 }
             }
 
