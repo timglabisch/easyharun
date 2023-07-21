@@ -6,14 +6,14 @@ use async_trait::async_trait;
 use tokio::select;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{info, trace, warn};
-use easyact::{Actor, ActorState};
-use easyharun_lib::config::{Config, ConfigContainer};
+use easyact::{Actor, ActorConfig, ActorState, ActorStateHandle};
+use easyharun_lib::config::{Config, ConfigContainer, ConfigFileHealthCheck};
 use easyharun_lib::ContainerId;
 use crate::config::config_provider::config_get;
 use crate::container_manager::world::WorldContainer;
 use crate::docker::docker_world_builder::build_world_from_docker;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
-use crate::health_check::http::health_check_http::{HealthCheckHttp, HealthCheckHttpHandle};
+use crate::health_check::http::health_check_http::{HealthCheckHttp};
 use crate::kv_container::KV;
 
 pub struct HealthCheckHttpConfig {
@@ -27,13 +27,13 @@ pub enum HealthCheckType {
 }
 
 pub enum HealthCheck {
-    Http(HealthCheckHttpHandle),
+    Http(ActorStateHandle<()>),
 }
 
 impl HealthCheck {
     pub fn kill(&self) {
         match self {
-            Self::Http(s) => s.kill(),
+            Self::Http(s) => s.shutdown(),
         };
     }
 }
@@ -56,7 +56,7 @@ impl HealthCheckManager {
 impl Actor for HealthCheckManager {
     type MSG = HealthCheckMsgRecv;
 
-    fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG> {
+    fn get_actor_state(&mut self) -> &mut ActorState<HealthCheckMsgRecv> {
         &mut self.actor_state
     }
 
@@ -68,7 +68,7 @@ impl Actor for HealthCheckManager {
         self.run_inner_maintain_checks().await
     }
 
-    async fn on_msg(&mut self, msg: Self::MSG) -> Result<(), Error> {
+    async fn on_msg(&mut self, msg: HealthCheckMsgRecv) -> Result<(), Error> {
         self.run_inner_got_msg(msg).await
     }
 }
@@ -215,16 +215,38 @@ impl HealthCheckManager {
         let container_id = &world_container.container_id.clone().context("container must have a container id")?;
 
         Ok(match config_health_check.check.as_str() {
-            "http" => HealthCheck::Http(HealthCheckHttp::new(
-                format!("{}-{}", health_check_name, container_id.as_str()),
-                self.actor_state.create_handle(),
-                HealthCheckHttpConfig {
-                    container_id: container_id.clone(),
-                    url: Self::template_parse_world_container(&config_health_check.url, world_container).context("template_parse_world_container")?,
-                    timeout_ms: config_health_check.timeout_ms,
-                },
-            )),
+            "http" => HealthCheck::Http(self.build_health_check_http(
+                container_id.clone(),
+                config_health_check.clone(),
+                health_check_name,
+                world_container
+            )?),
             _ => return Err(anyhow!("health_check type {} is not defined", config_health_check.check)),
         })
+    }
+
+    pub fn build_health_check_http(
+        &self,
+        container_id: ContainerId,
+        config_file_health_check: ConfigFileHealthCheck,
+        health_check_name: &str,
+        world_container: &WorldContainer
+    ) -> Result<ActorStateHandle<()>, ::anyhow::Error> {
+        let health_check_id = format!("{}-{}", health_check_name, container_id.as_str());
+
+        let check_config = HealthCheckHttpConfig {
+            container_id: container_id.clone(),
+            url: Self::template_parse_world_container(&config_file_health_check.url, world_container).context("template_parse_world_container")?,
+            timeout_ms: config_file_health_check.timeout_ms,
+        };
+
+        let (_, handle, _) = Actor::spawn(ActorConfig::new("Healh Check Http", "Healh Check").build(), |actor_state| HealthCheckHttp::new(
+            health_check_id,
+            self.actor_state.create_handle(),
+            check_config,
+            actor_state,
+        ));
+
+        Ok(handle)
     }
 }

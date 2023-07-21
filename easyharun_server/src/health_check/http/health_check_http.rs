@@ -1,71 +1,58 @@
 use std::time::Duration;
-use anyhow::Context;
+use anyhow::{Context, Error};
+use async_trait::async_trait;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::trace;
-use easyact::ActorStateHandle;
+use easyact::{Actor, ActorState, ActorStateHandle};
 use crate::health_check::health_check_manager::HealthCheckHttpConfig;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
 
-pub enum HealthCheckHttpHandleMsg {
-    Kill,
-}
-
-pub struct HealthCheckHttpHandle {
-    message_send: Sender<HealthCheckHttpHandleMsg>,
-}
-
-impl HealthCheckHttpHandle {
-    pub fn kill(&self) {
-        self.message_send.send(HealthCheckHttpHandleMsg::Kill);
-    }
-}
 
 pub struct HealthCheckHttp {
     health_check_id: String,
     sender: ActorStateHandle<HealthCheckMsgRecv>,
-    message_recv: Receiver<HealthCheckHttpHandleMsg>,
+    actor_state: ActorState<()>,
     check_config: HealthCheckHttpConfig,
 }
+
+#[async_trait]
+impl Actor for HealthCheckHttp {
+    type MSG = ();
+
+    fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG> {
+        &mut self.actor_state
+    }
+
+    fn timer_duration(&self) -> Option<Duration> {
+        Some(::tokio::time::Duration::from_millis(100))
+    }
+
+    async fn on_timer(&mut self) -> Result<(), Error> {
+        self.run_inner().await
+    }
+
+    async fn on_msg(&mut self, msg: Self::MSG) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
 
 impl HealthCheckHttp {
     pub fn new(
         health_check_id: String,
         sender: ActorStateHandle<HealthCheckMsgRecv>,
-        check_config: HealthCheckHttpConfig
-    ) -> HealthCheckHttpHandle {
+        check_config: HealthCheckHttpConfig,
+        actor_state: ActorState<()>
+    ) -> Self {
 
-        let (message_send, message_recv) = channel(100);
-
-        let check = Self {
+        HealthCheckHttp {
             health_check_id,
             sender,
-            message_recv,
-            check_config
-        };
-
-        ::tokio::spawn(async move {
-            check.run().await
-        });
-
-        HealthCheckHttpHandle {
-            message_send,
+            actor_state,
+            check_config,
         }
     }
 
-    async fn run(mut self) {
-        loop {
-            match self.run_inner().await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Health Check Manager Error: \n{:?}\n\n", e)
-                }
-            };
-
-            trace!("sleep");
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(100)).await;
-            trace!("/sleep");
-        }
-    }
 
     async fn run_inner(&mut self) -> Result<(), ::anyhow::Error> {
 

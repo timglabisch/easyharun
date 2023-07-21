@@ -70,7 +70,7 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     inbox: Option<Receiver<ActorMsg<MSG>>>,
     inbox_sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>,
     metrics: ActorStateMetrics,
-    shutdown: bool,
+    pub shutdown: bool,
     shutdown_notify: Vec<::tokio::sync::oneshot::Sender<()>>
 }
 
