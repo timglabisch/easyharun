@@ -12,6 +12,7 @@ use tokio::sync::oneshot::{Sender};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
+use crate::actor::ActorRegistry::DEFAULT_ACTOR_REGISTRY;
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, ActorRegistryMsgUnregister};
 
 static ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
@@ -234,7 +235,10 @@ impl ActorConfig {
         ActorConfigBuilder {
             actor_name: actor_name.as_ref().to_string(),
             actor_type: actor_type.as_ref().to_string(),
-            registry: None,
+            registry: match DEFAULT_ACTOR_REGISTRY.clone().take() {
+                Some(v) => Some(v),
+                None => None,
+            },
             cancellation_tokens: vec![],
         }
     }

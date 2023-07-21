@@ -16,6 +16,7 @@ use crate::config::ConfigMonitor;
 use crate::container_manager::ContainerManager;
 use crate::health_check::health_check_manager::HealthCheckManager;
 use crate::proxy::proxy_manager::ProxyManager;
+use easyact::{actor_run_grpc_server, ActorRegistry};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "example", about = "An example of StructOpt usage.")]
@@ -29,6 +30,14 @@ pub async fn main() {
     tracing_subscriber::fmt::init();
 
     ConfigMonitor::load_config().await;
+
+    let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
+    registry_actor.register_as_default();
+
+    let registry_actor_copy_server = registry_actor.clone();
+    let jh_actor_proto_server = ::tokio::spawn(async move {
+        actor_run_grpc_server("0.0.0.0:50051", registry_actor_copy_server).await
+    });
 
     let jh_config_watch = ::tokio::spawn(async move {
         ConfigMonitor::async_watch().await

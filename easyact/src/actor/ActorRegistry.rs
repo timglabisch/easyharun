@@ -1,18 +1,33 @@
+use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::collections::hash_map::Entry::Vacant;
 use std::collections::hash_map::Entry::Occupied;
 use std::collections::HashMap;
 use std::fmt::{Debug};
 use std::sync::atomic::{Ordering};
+use std::sync::OnceLock;
 use async_trait::async_trait;
+use futures::future::Lazy;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::oneshot::error::RecvError;
 use tokio::task::JoinHandle;
 use tracing::warn;
 use crate::actor::Actor::{Actor, ActorConfig, ActorId, ActorMsg, ActorState, ActorStateHandle, ActorStateHandleManageable};
 
+pub static DEFAULT_ACTOR_REGISTRY: OnceLock<ActorRegistry> = OnceLock::new();
+
+
 #[derive(Debug)]
 pub struct ActorRegistry {
     inner: ActorStateHandle<ActorRegistryMsg>,
+}
+
+impl Clone for ActorRegistry {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl ActorRegistry {
@@ -25,10 +40,8 @@ impl ActorRegistry {
         (jh, ActorRegistry {inner : handle})
     }
 
-    pub fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
+    pub fn register_as_default(&self) {
+        DEFAULT_ACTOR_REGISTRY.set(self.clone()).expect("could not register actor registry as default");
     }
 
     pub async fn get_running_actors(&self) -> Result<Vec<ActorRegistryMsgGetRunningActorsEntry>, ::anyhow::Error> {

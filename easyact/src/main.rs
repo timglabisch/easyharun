@@ -39,14 +39,15 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
     // console_subscriber::init();
 
     let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
+    registry_actor.register_as_default();
 
     let (a, registry_cancellation) = CancellationTokenRegistry::spawn_new();
 
     let token = registry_cancellation.create_or_get_token("foo").await;
 
 
-    let (jh_1, handle_a, ready_1) = Actor::spawn(ActorConfig::new("Actor A", "Foo").registry(&registry_actor).build(), |actor_state| ActorA { actor_state });
-    let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").registry(&registry_actor).cancel_on_actor(&handle_a).build(), |actor_state| ActorA { actor_state });
+    let (jh_1, handle_a, ready_1) = Actor::spawn(ActorConfig::new("Actor A", "Foo").build(), |actor_state| ActorA { actor_state });
+    let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").cancel_on_actor(&handle_a).build(), |actor_state| ActorA { actor_state });
 
 
     //println!("{:#?}", );
@@ -63,7 +64,7 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
     // handle_a.
 
-    join3(jh_1, jh_2, proto::grpc_server_run(registry_actor)).await;
+    join3(jh_1, jh_2, proto::actor_run_grpc_server("0.0.0.0:50051", registry_actor)).await;
 
     Ok(())
 }

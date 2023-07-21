@@ -13,18 +13,17 @@ pub mod proto_actor {
 
 pub mod service_actor;
 
-pub async fn grpc_server_run(actor_registry: ActorRegistry) -> Result<(), ::anyhow::Error> {
-    let addr = "0.0.0.0:50051".parse()?;
+pub async fn actor_run_grpc_server<S : AsRef<str>>(
+    addr: S,
+    actor_registry: ActorRegistry
+) -> Result<(), ::anyhow::Error> {
+    let addr = addr.as_ref().parse()?;
     let grpc_service = GrpcServiceActor::new(actor_registry);
-
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
-
-
-    println!("start");
 
     Server::builder()
         .accept_http1(true)
@@ -32,8 +31,6 @@ pub async fn grpc_server_run(actor_registry: ActorRegistry) -> Result<(), ::anyh
         .add_service(::tonic_web::enable(ActorServiceServer::new(grpc_service)))
         .serve(addr)
         .await?;
-
-    println!("failed");
 
     Ok(())
 }

@@ -18,6 +18,14 @@ async-trait = "0.1.*"
 pin-project-lite = "0.2.*"
 console-subscriber = "*"
 
+[lib]
+name = "easyact"
+path = "src/lib.rs"
+
+[[bin]]
+name = "easyact"
+path = "src/main.rs"
+
 
 [build-dependencies]
 tonic-build = {version = "0.9", features = ["prost"] }
