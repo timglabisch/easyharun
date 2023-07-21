@@ -68,9 +68,20 @@ pub struct ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
     cancellation_tokens_others: Vec<CancellationToken>,
     cancellation_token_self: CancellationToken,
     inbox: Option<Receiver<ActorMsg<MSG>>>,
+    inbox_sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>,
     metrics: ActorStateMetrics,
     shutdown: bool,
     shutdown_notify: Vec<::tokio::sync::oneshot::Sender<()>>
+}
+
+impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
+    pub fn create_handle(&self) -> ActorStateHandle<MSG> {
+        ActorStateHandle {
+            id: self.id.clone(),
+            sender: self.inbox_sender.clone(),
+            cancellation_token_self: self.cancellation_token_self.clone()
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -174,6 +185,7 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
             cancellation_token_self: cancellation_token_self.clone(),
             metrics: ActorStateMetrics::default(),
             inbox: Some(inbox),
+            inbox_sender: inbox_sender,
             cancellation_tokens_others: cancellation_tokens,
             name,
             actor_type,
@@ -182,11 +194,7 @@ impl<MSG> ActorState<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
         };
 
         (
-            ActorStateHandle {
-                id: id,
-                sender: inbox_sender,
-                cancellation_token_self
-            },
+            s.create_handle(),
             s
         )
     }

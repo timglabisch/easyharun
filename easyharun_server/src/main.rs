@@ -47,12 +47,11 @@ pub async fn main() {
         ProxyManager::new().run().await
     });
 
-
     let (jh_containermanager, handle_containermanager, _) = Actor::spawn(ActorConfig::new("ContainerManager", "Manager").build(), |actor_state| ContainerManager { actor_state });
 
-    let jh_healh_check_manager = ::tokio::spawn(async move {
-        HealthCheckManager::new().run().await
-    });
+
+    let (jh_healh_check_manager, handle_healh_check_manager, _) = Actor::spawn(ActorConfig::new("HealthCheckManager", "Manager").build(), |actor_state| HealthCheckManager::new(actor_state));
+
 
     ::tokio::select! {
         _ = jh_proxymanager => {

@@ -1,10 +1,12 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context, Error};
+use async_trait::async_trait;
 use tokio::select;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{info, trace, warn};
+use easyact::{Actor, ActorState};
 use easyharun_lib::config::{Config, ConfigContainer};
 use easyharun_lib::ContainerId;
 use crate::config::config_provider::config_get;
@@ -37,61 +39,43 @@ impl HealthCheck {
 }
 
 pub struct HealthCheckManager {
-    sender: Sender<HealthCheckMsgRecv>,
-    recv: Receiver<HealthCheckMsgRecv>,
     health_checks: HashMap<ContainerId, Vec<(String, HealthCheck)>>,
+    actor_state: ActorState<HealthCheckMsgRecv>
 }
 
 impl HealthCheckManager {
-    pub fn new() -> HealthCheckManager {
-        let (sender, recv) = channel(1000);
-
+    pub fn new(actor_state: ActorState<HealthCheckMsgRecv>) -> Self {
         Self {
-            sender,
-            recv,
             health_checks: HashMap::new(),
+            actor_state
         }
     }
+}
 
-    pub async fn run(mut self) {
-        loop {
-            match self.run_inner().await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Health Check Manager Error: \n{:?}\n\n", e)
-                }
-            };
+#[async_trait]
+impl Actor for HealthCheckManager {
+    type MSG = HealthCheckMsgRecv;
 
-            trace!("sleep");
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(500)).await;
-            trace!("/sleep");
-        }
+    fn get_actor_state(&mut self) -> &mut ActorState<Self::MSG> {
+        &mut self.actor_state
     }
 
-    pub async fn run_inner(&mut self) -> Result<(), ::anyhow::Error> {
-
-        let mut interval = ::tokio::time::interval(Duration::from_millis(500));
-
-        loop {
-            select! {
-                _ = interval.tick() => {
-                    self.run_inner_maintain_checks().await.context("run_inner_maintain_checks")?
-                },
-                msg = self.recv.recv() => {
-                    self.run_inner_got_msg(msg).await.context("run_inner_got_msg")?;
-                    info!("msg");
-                }
-            }
-
-            ::tokio::time::sleep(::tokio::time::Duration::from_millis(500)).await;
-        }
+    fn timer_duration(&self) -> Option<Duration> {
+        Some(Duration::from_millis(500))
     }
 
-    pub async fn run_inner_got_msg(&self, msg_raw : Option<HealthCheckMsgRecv>) -> Result<(), ::anyhow::Error> {
-        let msg = match msg_raw {
-            Some(s) => s,
-            None => return Ok(()),
-        };
+    async fn on_timer(&mut self) -> Result<(), Error> {
+        self.run_inner_maintain_checks().await
+    }
+
+    async fn on_msg(&mut self, msg: Self::MSG) -> Result<(), Error> {
+        self.run_inner_got_msg(msg).await
+    }
+}
+
+impl HealthCheckManager {
+
+    pub async fn run_inner_got_msg(&self, msg : HealthCheckMsgRecv) -> Result<(), ::anyhow::Error> {
 
         match msg {
             HealthCheckMsgRecv::CheckFailed(msg) => self.on_health_check_failed(msg).await?,
@@ -233,7 +217,7 @@ impl HealthCheckManager {
         Ok(match config_health_check.check.as_str() {
             "http" => HealthCheck::Http(HealthCheckHttp::new(
                 format!("{}-{}", health_check_name, container_id.as_str()),
-                self.sender.clone(),
+                self.actor_state.create_handle(),
                 HealthCheckHttpConfig {
                     container_id: container_id.clone(),
                     url: Self::template_parse_world_container(&config_health_check.url, world_container).context("template_parse_world_container")?,

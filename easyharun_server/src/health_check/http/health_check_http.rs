@@ -2,6 +2,7 @@ use std::time::Duration;
 use anyhow::Context;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::trace;
+use easyact::ActorStateHandle;
 use crate::health_check::health_check_manager::HealthCheckHttpConfig;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
 
@@ -21,7 +22,7 @@ impl HealthCheckHttpHandle {
 
 pub struct HealthCheckHttp {
     health_check_id: String,
-    sender: Sender<HealthCheckMsgRecv>,
+    sender: ActorStateHandle<HealthCheckMsgRecv>,
     message_recv: Receiver<HealthCheckHttpHandleMsg>,
     check_config: HealthCheckHttpConfig,
 }
@@ -29,7 +30,7 @@ pub struct HealthCheckHttp {
 impl HealthCheckHttp {
     pub fn new(
         health_check_id: String,
-        sender: Sender<HealthCheckMsgRecv>,
+        sender: ActorStateHandle<HealthCheckMsgRecv>,
         check_config: HealthCheckHttpConfig
     ) -> HealthCheckHttpHandle {
 
