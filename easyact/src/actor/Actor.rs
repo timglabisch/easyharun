@@ -17,8 +17,9 @@ use tokio_util::sync::CancellationToken;
 use tracing::{warn};
 use crate::actor::ActorRegistry::DEFAULT_ACTOR_REGISTRY;
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, ActorRegistryMsgUnregister};
+use crate::actor::HasCancellationToken::HasCancellationToken;
 
-static ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
+pub static ACTOR_ID_GEN : AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ActorId(pub u64);
@@ -89,6 +90,12 @@ pub struct ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: U
     id: ActorId,
     sender: ::tokio::sync::mpsc::Sender<ActorMsg<MSG>>,
     cancellation_token_self: CancellationToken,
+}
+
+impl<MSG> HasCancellationToken for ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
+    fn get_cancellation_token(&self) -> CancellationToken {
+        self.cancellation_token_self.clone()
+    }
 }
 
 impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Unpin {
@@ -226,8 +233,8 @@ impl ActorConfigBuilder {
         self
     }
 
-    pub fn cancel_on_actor<MSG>(mut self, actor_state_handle: &ActorStateHandle<MSG>) -> Self where MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
-        self.cancellation_tokens.push(actor_state_handle.get_cancellation_token().clone());
+    pub fn cancel_on(mut self, could_cancel: &dyn HasCancellationToken) -> Self {
+        self.cancellation_tokens.push(could_cancel.get_cancellation_token());
         self
     }
 
