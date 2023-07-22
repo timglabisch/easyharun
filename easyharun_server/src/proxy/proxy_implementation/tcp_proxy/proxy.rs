@@ -4,10 +4,10 @@ use tokio::net::{TcpListener, TcpStream};
 use std::error::Error;
 use anyhow::{anyhow, Context};
 use futures::FutureExt;
-use structopt::clap::app_from_crate;
+
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{info, warn};
-use crate::brain::brain_action::BrainAction;
+
 use crate::kv_container::KV;
 
 use crate::proxy::brain::{ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};

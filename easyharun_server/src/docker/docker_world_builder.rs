@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use anyhow::{anyhow, Context};
 use bollard::container::ListContainersOptions;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, trace, warn};
 
 use bollard::models::ContainerSummary;
-use easyharun_lib::config::ConfigContainer;
+
 use easyharun_lib::ContainerId;
 
 use crate::container_manager::world::{World, WorldContainer};
@@ -75,7 +75,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
 
     let docker = docker_create_connection()?;
 
-    let mut filters : HashMap<String, Vec<String>> = HashMap::new();
+    let filters : HashMap<String, Vec<String>> = HashMap::new();
 
     let containers = docker.list_containers(Some(ListContainersOptions {
         all: true,

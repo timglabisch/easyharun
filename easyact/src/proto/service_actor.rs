@@ -35,12 +35,12 @@ impl ActorService for GrpcServiceActor {
 
     async fn actors_running_get(
         &self,
-        request: Request<ActorsRunningGetRequest>,
+        _request: Request<ActorsRunningGetRequest>,
     ) -> Result<Response<ActorsRunningGetResponse>, Status> {
 
         let running_actors = match self.actor_registry.get_running_actors().await {
             Ok(v) => v,
-            Err(e) => return Err(Status::internal("could not read running actors."))
+            Err(_e) => return Err(Status::internal("could not read running actors."))
         };
 
         Ok(Response::new(ActorsRunningGetResponse{

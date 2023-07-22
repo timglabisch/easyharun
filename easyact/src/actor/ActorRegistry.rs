@@ -1,15 +1,15 @@
-use std::borrow::Cow;
-use std::cell::OnceCell;
+
+
 use std::collections::hash_map::Entry::Vacant;
 use std::collections::hash_map::Entry::Occupied;
 use std::collections::HashMap;
 use std::fmt::{Debug};
-use std::sync::atomic::{Ordering};
+
 use std::sync::OnceLock;
 use async_trait::async_trait;
-use futures::future::Lazy;
+
 use tokio::sync::mpsc::error::SendError;
-use tokio::sync::oneshot::error::RecvError;
+
 use tokio::task::JoinHandle;
 use tracing::warn;
 use crate::actor::Actor::{Actor, ActorConfig, ActorId, ActorMsg, ActorState, ActorStateHandle, ActorStateHandleManageable};
@@ -144,7 +144,7 @@ impl ActorRegistryActor {
     async fn on_msg_shutdown(&mut self, msg: ActorRegistryMsgShutdown) {
         let actor = match self.actors.iter().find(|(id, _)| id.0 == msg.actor_id.0) {
             None => return,
-            Some((id, entry)) => entry,
+            Some((_id, entry)) => entry,
         };
 
         actor.actor_handle_manage.shutdown().await;
@@ -152,7 +152,7 @@ impl ActorRegistryActor {
 
     fn on_msg_register(&mut self, msg: ActorRegistryMsgRegister) {
         match self.actors.entry(msg.actor_id.clone()) {
-            Occupied(mut o) => {
+            Occupied(_o) => {
                 warn!("could not reregister actor {:?}", msg)
             }
             Vacant(o) => {
@@ -168,10 +168,10 @@ impl ActorRegistryActor {
 
     fn on_msg_unregister(&mut self, msg: ActorRegistryMsgUnregister) {
         match self.actors.entry(msg.actor_id.clone()) {
-            Occupied(mut o) => {
+            Occupied(o) => {
                 o.remove();
             }
-            Vacant(o) => {
+            Vacant(_o) => {
                 warn!("could not remove actor {:?}", msg)
             }
         }

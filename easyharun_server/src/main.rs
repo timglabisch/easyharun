@@ -11,7 +11,7 @@ mod health_check;
 
 use structopt::StructOpt;
 use easyharun_lib::config::Config;
-use crate::config::config_provider::config_set;
+
 use crate::config::ConfigMonitor;
 use crate::container_manager::ContainerManager;
 use crate::health_check::health_check_manager::HealthCheckManager;

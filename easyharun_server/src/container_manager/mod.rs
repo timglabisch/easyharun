@@ -1,6 +1,6 @@
 use std::time::Duration;
 use anyhow::{Context, Error};
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info};
 use easyact::{Actor, ActorState};
 use crate::brain::brain::Brain;
 use crate::config::config_world_builder::build_world_from_config;

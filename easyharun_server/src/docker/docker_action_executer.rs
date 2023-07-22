@@ -85,7 +85,7 @@ impl DockerActionExecuter {
             exposed_ports: Some({
                 let mut exposed_ports = HashMap::new();
 
-                let mut empty = HashMap::<(), ()>::new();
+                let empty = HashMap::<(), ()>::new();
                 let exposed_port = format!("{}", container.container_port);
                 exposed_ports.insert(exposed_port, empty);
                 exposed_ports

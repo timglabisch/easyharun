@@ -1,8 +1,8 @@
 use std::time::Duration;
 use anyhow::{Context, Error};
 use async_trait::async_trait;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tracing::trace;
+
+
 use easyact::{Actor, ActorState, ActorStateHandle};
 use crate::health_check::health_check_manager::HealthCheckHttpConfig;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};

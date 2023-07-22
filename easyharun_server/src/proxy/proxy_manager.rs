@@ -5,15 +5,15 @@ use std::time::Duration;
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bollard::container::ListContainersOptions;
-use tracing::{info, instrument, trace, warn};
+use tracing::{info, warn};
 use easyact::{Actor, ActorState};
 use easyharun_lib::config::Config;
 
 use easyharun_lib::portmapping::{PortMapping};
 use crate::config::config_provider::config_get;
 use crate::docker::docker_connection::docker_create_connection;
-use crate::docker::docker_world_builder::{build_world_container, docker_container_info, extract_dynamic_port_form_container};
-use crate::kv_container::KV;
+use crate::docker::docker_world_builder::{build_world_container, docker_container_info};
+
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
 use crate::proxy::proxy_implementation::tcp_proxy::proxy::TcpProxy;
@@ -69,7 +69,7 @@ impl ProxyManager {
 
         let docker = docker_create_connection().context("docker connection?")?;
 
-        let mut filters : HashMap<String, Vec<String>> = HashMap::new();
+        let filters : HashMap<String, Vec<String>> = HashMap::new();
         // filters.insert("label", vec!["easyharun=\"1.0.0\""]);
 
         let containers = docker.list_containers(Some(ListContainersOptions {

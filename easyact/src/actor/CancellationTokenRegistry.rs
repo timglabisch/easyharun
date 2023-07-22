@@ -1,11 +1,11 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::marker::PhantomData;
+
+
 use async_trait::async_trait;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use crate::actor::Actor::{Actor, ActorConfig, ActorConfigBuilder, ActorState, ActorStateHandle};
+use crate::actor::Actor::{Actor, ActorConfig, ActorState, ActorStateHandle};
 
 #[derive(Debug)]
 pub struct ActorCancellationTokenMsgGetOrCreate {
@@ -99,7 +99,7 @@ impl Actor for CancellationTokenRegistryActor {
             ActorCancellationTokenMsg::Delete(entry) => {
                 let token = match self.tokens.entry(entry.obj) {
                     Entry::Occupied(e) => Some(e.remove()),
-                    Entry::Vacant(e) => None
+                    Entry::Vacant(_e) => None
                 };
 
                 match entry.shot.send(token) {

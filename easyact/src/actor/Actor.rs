@@ -1,20 +1,20 @@
 use std::fmt::{Debug, Display, Formatter};
-use std::pin::Pin;
+
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::OptionFuture;
-use futures::select;
-use pin_project_lite::pin_project;
+
+
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::channel;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::oneshot::{Sender};
 use tokio::task::JoinHandle;
-use tokio::time::{Instant, Sleep};
+
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn};
+use tracing::{warn};
 use crate::actor::ActorRegistry::DEFAULT_ACTOR_REGISTRY;
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, ActorRegistryMsgUnregister};
 
@@ -150,7 +150,7 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send + 'static, MSG : Sync, MSG: Size
 
         let (s, r) = ::tokio::sync::oneshot::channel();
 
-        let res = self.sender.send(ActorMsg::Shutdown(ActorMsgShutdown {notify: Some(s)})).await?;
+        let _res = self.sender.send(ActorMsg::Shutdown(ActorMsgShutdown {notify: Some(s)})).await?;
 
         Ok(r)
     }
@@ -280,7 +280,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
 
         let (ready_shot_s, ready_shot_r) = ::tokio::sync::oneshot::channel();
 
-        let name = format!("Actor {}", actor_state.name);
+        let _name = format!("Actor {}", actor_state.name);
 
         let mut this = func(actor_state);
         let actor_handle_manage = Box::new(handle.clone());
@@ -293,7 +293,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
                     actor_handle_manage
                 })).await {
                     Ok(_) => {},
-                    Err(e) => {
+                    Err(_e) => {
                         warn!("could not send registry that actor {} was registered", this.get_actor_state().name)
                     }
                 };
@@ -311,7 +311,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
                     actor_id: this.get_actor_state().id.clone(),
                 })).await {
                     Ok(_) => {},
-                    Err(e) => {
+                    Err(_e) => {
                         warn!("could not send registry that actor {} was unregistered", this.get_actor_state().name)
                     }
                 }
@@ -321,7 +321,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
                 // we ignore errors for now.
                 match notify_shutdown.send(()) {
                     Ok(_) => {},
-                    Err(e) => {}
+                    Err(_e) => {}
                 }
             }
 
@@ -405,7 +405,7 @@ pub trait Actor: Sized + Send + Sync + 'static {
         loop {
             match self.run_loop_inner().await {
                 Ok(_) => return,
-                Err(e) => {
+                Err(_e) => {
                     self.get_actor_state().metrics.errors += 1;
                     warn!("Actor Error {}", self.get_actor_state().name);
                 }
