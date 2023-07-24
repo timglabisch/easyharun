@@ -47,7 +47,7 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
 
     let (jh_1, handle_a, ready_1) = Actor::spawn(ActorConfig::new("Actor A", "Foo").build(), |actor_state| ActorA { actor_state });
-    let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").cancel_on_actor(&handle_a).build(), |actor_state| ActorA { actor_state });
+    let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").cancel_on(&handle_a).build(), |actor_state| ActorA { actor_state });
 
 
     //println!("{:#?}", );
