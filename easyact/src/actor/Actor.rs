@@ -110,7 +110,6 @@ impl<MSG> ActorStateHandle<MSG> where MSG: Send, MSG : Sync, MSG: Sized, MSG: Un
 
 #[async_trait]
 pub trait ActorStateHandleManageable {
-    async fn ping(&self) -> Result<ActorMsgPingResponse, ::anyhow::Error>;
     async fn shutdown(&self) -> Result<::tokio::sync::oneshot::Receiver<()>, ::anyhow::Error>;
 }
 
@@ -122,10 +121,6 @@ impl Debug for Box<dyn ActorStateHandleManageable + 'static + Send + Sync> {
 
 #[async_trait]
 impl<MSG> ActorStateHandleManageable for ActorStateHandle<MSG> where MSG: Debug, MSG: Send + 'static, MSG : Sync, MSG: Sized, MSG: Unpin {
-    async fn ping(&self) -> Result<ActorMsgPingResponse, Error> {
-        self.ping().await
-    }
-
     async fn shutdown(&self) -> Result<tokio::sync::oneshot::Receiver<()>, Error> {
         self.shutdown().await
     }

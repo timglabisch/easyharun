@@ -5,8 +5,7 @@ use tokio::sync::oneshot::Receiver;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
-use easyact::actor::Actor::ActorStateHandleManageable;
-use crate::actor::Actor::{ACTOR_ID_GEN, ActorId, ActorMsgPingResponse};
+use crate::actor::Actor::{ACTOR_ID_GEN, ActorId, ActorMsgPingResponse, ActorStateHandleManageable};
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister};
 use crate::actor::HasCancellationToken::HasCancellationToken;
 
@@ -63,18 +62,19 @@ impl ActorTaskConfigBuilder {
     }
 }
 
-impl<T> ActorStateHandleManageable for &dyn ActorTask<RES=T> {
-    async fn ping(&self) -> Result<ActorMsgPingResponse, Error> {
-        todo!()
-    }
+struct ActorStateHandleManageableHandle {
 
+}
+
+#[async_trait]
+impl ActorStateHandleManageable for ActorStateHandleManageableHandle  {
     async fn shutdown(&self) -> Result<Receiver<()>, Error> {
         todo!()
     }
 }
 
 #[async_trait]
-pub trait ActorTask where Self:Sized {
+pub trait ActorTask where Self:Sized + Send + Sync + 'static {
 
     type RES : Send + Sync;
 
@@ -82,7 +82,7 @@ pub trait ActorTask where Self:Sized {
 
     async fn run(&mut self) -> Result<Self::RES, ::anyhow::Error>;
 
-    fn spawn<F>(actor_config : ActorTaskConfig, func: F) -> (JoinHandle<Self::RES>) where F: FnOnce(ActorTaskState) -> Self {
+    fn spawn<F>(actor_config : ActorTaskConfig, func: F) -> JoinHandle<Result<Self::RES, ::anyhow::Error>> where F: FnOnce(ActorTaskState) -> Self + 'static, F: Send + Sync, Self: 'static {
 
         let actor_task_state = ActorTaskState {
             id: ActorId(ACTOR_ID_GEN.fetch_add(1, Ordering::Relaxed)),
@@ -92,15 +92,15 @@ pub trait ActorTask where Self:Sized {
             cancellation_token_self: CancellationToken::new(),
         };
 
-        let mut this = func(actor_task_state);
-
         let jh = ::tokio::spawn(async move {
+            let mut this = func(actor_task_state);
+
             if let Some(ref r) = actor_config.registry {
                 match r.send(ActorRegistryMsg::Register(ActorRegistryMsgRegister {
                     actor_id: this.get_actor_state().id.clone(),
                     actor_name: this.get_actor_state().name.clone(),
                     actor_type: this.get_actor_state().actor_type.clone(),
-                    actor_handle_manage
+                    actor_handle_manage: Box::new(ActorStateHandleManageableHandle {}),
                 })).await {
                     Ok(_) => {},
                     Err(_e) => {
@@ -108,8 +108,10 @@ pub trait ActorTask where Self:Sized {
                     }
                 };
             };
+
+            this.run().await
         });
 
-        Ok(())
+        jh
     }
 }
