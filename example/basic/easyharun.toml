@@ -11,7 +11,7 @@ health_checks = ["http"]
 proxies = ["http"]
 
 [[container]]
-replicas = 1
+replicas = 2
 name = "apache"
 image = "httpd:2.4"
 container_port = 80

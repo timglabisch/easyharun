@@ -31,9 +31,9 @@ pub enum HealthCheck {
 }
 
 impl HealthCheck {
-    pub fn kill(&self) {
+    pub async fn kill(&self) {
         match self {
-            Self::Http(s) => s.shutdown(),
+            Self::Http(s) => s.shutdown().await,
         };
     }
 }
@@ -160,7 +160,7 @@ impl HealthCheckManager {
                     Some(checks) => {
                         for (check_name, handle) in checks {
                             info!("Stopping health check because container is not running.");
-                            handle.kill();
+                            handle.kill().await;
                         }
                     },
                 };

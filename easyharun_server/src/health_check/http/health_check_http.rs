@@ -24,7 +24,7 @@ impl Actor for HealthCheckHttp {
     }
 
     fn timer_duration(&self) -> Option<Duration> {
-        Some(::tokio::time::Duration::from_millis(100))
+        Some(::tokio::time::Duration::from_millis(1000))
     }
 
     async fn on_timer(&mut self) -> Result<(), Error> {
