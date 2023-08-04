@@ -7,7 +7,7 @@ use crate::proxy::brain::ProxyBrainAction;
 #[derive(Debug)]
 pub struct ProxyHandle {
     sender: ::tokio::sync::mpsc::UnboundedSender<ProxyBrainAction>,
-    jh: JoinHandle<()>,
+    jh: JoinHandle<Result<(), ::anyhow::Error>>,
     listen_addr: String,
     server_addrs: HashSet<String>,
 }
@@ -15,7 +15,7 @@ pub struct ProxyHandle {
 impl ProxyHandle {
     pub fn new(
         sender: ::tokio::sync::mpsc::UnboundedSender<ProxyBrainAction>,
-        jh: JoinHandle<()>,
+        jh: JoinHandle<Result<(), ::anyhow::Error>>,
         listen_addr: String,
     ) -> Self {
         Self {

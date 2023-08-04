@@ -3,10 +3,12 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use std::error::Error;
 use anyhow::{anyhow, Context};
+use async_trait::async_trait;
 use futures::FutureExt;
 
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{info, warn};
+use easyact::actor::ActorTask::{ActorTask, ActorTaskConfig, ActorTaskState};
 
 use crate::kv_container::KV;
 
@@ -19,42 +21,18 @@ pub struct TcpProxy {
     server_addrs: Vec<String>,
     stats_requests_all: u64,
     recv: UnboundedReceiver<ProxyBrainAction>,
+    actor_state: ActorTaskState,
 }
 
-impl TcpProxy {
+#[async_trait]
+impl ActorTask for TcpProxy {
+    type RES = ();
 
-    pub fn new(
-        listen_addr: String,
-        recv: UnboundedReceiver<ProxyBrainAction>
-    ) -> Self {
-        Self {
-            listen_addr,
-            server_addrs: vec![],
-            stats_requests_all: 0,
-            recv,
-        }
+    fn get_actor_state(&mut self) -> &mut ActorTaskState {
+        &mut self.actor_state
     }
 
-    pub fn spawn_and_create_handle(
-        listen_addr: String
-    ) -> ProxyHandle {
-
-        let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyBrainAction>();
-
-        let listen_addr_clone = listen_addr.to_string();
-        let jh = ::tokio::spawn(async move {
-            Self::new(listen_addr_clone, recv).run().await.expect("tcp proxy failed");
-            ()
-        });
-
-        ProxyHandle::new(
-            sender,
-            jh,
-            listen_addr
-        )
-    }
-
-    pub async fn run(mut self) -> Result<(), ::anyhow::Error> {
+    async fn run(&mut self) -> Result<Self::RES, ::anyhow::Error> {
 
         let listener = TcpListener::bind(&self.listen_addr).await?;
 
@@ -74,6 +52,36 @@ impl TcpProxy {
                 }
             }
         }
+    }
+}
+
+impl TcpProxy {
+
+    pub fn spawn_and_create_handle(
+        listen_addr: String,
+    ) -> ProxyHandle {
+
+        let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyBrainAction>();
+
+        let listen_addr_clone = listen_addr.to_string();
+
+
+        let jh = ActorTask::spawn(ActorTaskConfig::new(
+            format!("Tcp Proxy {}", &listen_addr),
+            "Proxy",
+        ).build(), |actor_state| Self {
+            listen_addr: listen_addr_clone,
+            server_addrs: vec![],
+            stats_requests_all: 0,
+            recv,
+            actor_state
+        });
+
+        ProxyHandle::new(
+            sender,
+            jh,
+            listen_addr
+        )
     }
 
     fn handle_action(&mut self, action : ProxyBrainAction) {

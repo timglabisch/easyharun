@@ -26,12 +26,12 @@ impl ProxyBrain {
         let mut buf = vec![];
 
         buf.extend(Self::think_about_adding_proxies(worlds));
-        buf.extend(Self::think_about_removing_proxies(worlds));
+        buf.extend(Self::think_about_removing_servers_from_proxy(worlds));
 
         return buf;
     }
 
-    fn think_about_removing_proxies(worlds : &ProxyWorlds) -> Vec<ProxyBrainAction> {
+    fn think_about_removing_servers_from_proxy(worlds : &ProxyWorlds) -> Vec<ProxyBrainAction> {
         let mut buf = vec![];
 
         for (_, proxy_current) in worlds.current.proxies.iter() {

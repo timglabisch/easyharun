@@ -1,6 +1,6 @@
 [[proxy]]
 name = "http"
-listen = "0.0.0.0:88"
+listen = "0.0.0.0:89"
 
 [[container]]
 replicas = 1
