@@ -31,10 +31,12 @@ pub enum HealthCheck {
 }
 
 impl HealthCheck {
-    pub async fn kill(&self) {
+    pub async fn kill(&self) -> Result<(), ::anyhow::Error> {
         match self {
-            Self::Http(s) => s.shutdown().await,
+            Self::Http(s) => s.shutdown().await?,
         };
+
+        Ok(())
     }
 }
 

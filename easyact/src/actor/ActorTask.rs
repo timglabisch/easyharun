@@ -6,7 +6,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 use crate::actor::Actor::{ACTOR_ID_GEN, ActorId, ActorMsgPingResponse, ActorStateHandleManageable};
-use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister};
+use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, DEFAULT_ACTOR_REGISTRY};
 use crate::actor::HasCancellationToken::HasCancellationToken;
 
 pub struct ActorTaskState {
@@ -26,6 +26,23 @@ pub struct ActorTaskConfig {
     actor_type: String,
     registry: Option<ActorRegistry>,
     cancellation_tokens: Vec<CancellationToken>,
+}
+
+impl ActorTaskConfig {
+    pub fn new<N, T>(actor_name : N, actor_type: T) -> ActorTaskConfigBuilder
+        where N : AsRef<str>,
+        T: AsRef<str>
+    {
+        ActorTaskConfigBuilder {
+            actor_name: actor_name.as_ref().to_string(),
+            actor_type: actor_type.as_ref().to_string(),
+            registry: match DEFAULT_ACTOR_REGISTRY.clone().take() {
+                Some(v) => Some(v),
+                None => None,
+            },
+            cancellation_tokens: vec![],
+        }
+    }
 }
 
 pub struct ActorTaskConfigBuilder {

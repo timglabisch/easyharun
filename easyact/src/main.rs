@@ -2,11 +2,12 @@
 #![allow(unused_variables)]
 
 
-
+use anyhow::Error;
 use futures::future::{join3};
 
 
 use async_trait::async_trait;
+use easyact::actor::ActorTask::{ActorTask, ActorTaskConfig, ActorTaskState};
 use crate::actor::Actor::{Actor, ActorConfig, ActorState};
 use crate::actor::ActorRegistry::{ActorRegistry};
 use crate::actor::CancellationTokenRegistry::CancellationTokenRegistry;
@@ -16,6 +17,22 @@ pub mod proto;
 
 struct ActorA {
     actor_state: ActorState<String>,
+}
+
+struct ActorTaskA {
+    actor_state: ActorTaskState,
+}
+
+
+#[async_trait]
+impl ActorTask for ActorTaskA {
+    type RES = ();
+
+    fn get_actor_state(&mut self) -> &mut ActorTaskState { &mut self.actor_state }
+
+    async fn run(&mut self) -> Result<Self::RES, Error> {
+        return Ok(());
+    }
 }
 
 #[async_trait]
@@ -48,6 +65,8 @@ pub async fn main() -> Result<(), ::anyhow::Error> {
 
     let (jh_1, handle_a, ready_1) = Actor::spawn(ActorConfig::new("Actor A", "Foo").build(), |actor_state| ActorA { actor_state });
     let (jh_2, handle_b, ready_2) = Actor::spawn(ActorConfig::new("Actor B", "Foo").cancel_on(&handle_a).build(), |actor_state| ActorA { actor_state });
+
+    ActorTask::spawn(ActorTaskConfig::new("Task A", "Group!").build(), |actor_state| ActorTaskA { actor_state });
 
 
     //println!("{:#?}", );
