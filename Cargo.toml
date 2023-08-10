@@ -4,5 +4,6 @@ members = [
     "easyharun_server",
     "easyharun_lib",
     "easyharun_web",
+    "easyharun_test_container",
     "easyact"
 ]

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package server;
+
+service ContainerService {
+  rpc get_status(GetStatusRequest) returns (GetStatusResponse);
+}
+
+enum ContainerStatusEnum {
+  RUNNING = 0;
+  READY = 1;
+}
+
+message GetStatusRequest {
+}
+
+message GetStatusResponse {
+  uint64 id = 1;
+  string name = 2;
+}

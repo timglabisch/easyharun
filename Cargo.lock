@@ -398,6 +398,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "easyharun_test_container"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "easyharun_web"
 version = "0.1.0"
 
