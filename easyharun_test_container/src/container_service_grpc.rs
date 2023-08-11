@@ -13,19 +13,19 @@ impl ContainerServiceImpl {
 
 #[async_trait]
 impl ContainerService for ContainerServiceImpl {
-    async fn get_status(&self, request: Request<GetStatusRequest>) -> Result<Response<GetStatusResponse>, Status> {
+    async fn get_status(&self, _request: Request<GetStatusRequest>) -> Result<Response<GetStatusResponse>, Status> {
         todo!()
     }
 
-    async fn kill_server(&self, request: Request<KillServerRequest>) -> Result<Response<KillServerResponse>, Status> {
+    async fn kill_server(&self, _request: Request<KillServerRequest>) -> Result<Response<KillServerResponse>, Status> {
         todo!()
     }
 
-    async fn make_healthcheck_pass(&self, request: Request<MakeHealthcheckPassRequest>) -> Result<Response<MakeHealthcheckPassResponse>, Status> {
+    async fn make_healthcheck_pass(&self, _request: Request<MakeHealthcheckPassRequest>) -> Result<Response<MakeHealthcheckPassResponse>, Status> {
         todo!()
     }
 
-    async fn make_healthcheck_fail(&self, request: Request<MakeHealthcheckFailRequest>) -> Result<Response<MakeHealthcheckFailResponse>, Status> {
+    async fn make_healthcheck_fail(&self, _request: Request<MakeHealthcheckFailRequest>) -> Result<Response<MakeHealthcheckFailResponse>, Status> {
         todo!()
     }
 }

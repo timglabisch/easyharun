@@ -5,7 +5,7 @@ use tokio::sync::oneshot::Receiver;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
-use crate::actor::Actor::{ACTOR_ID_GEN, ActorId, ActorMsgPingResponse, ActorStateHandleManageable};
+use crate::actor::Actor::{ACTOR_ID_GEN, ActorId, ActorStateHandleManageable};
 use crate::actor::ActorRegistry::{ActorRegistry, ActorRegistryMsg, ActorRegistryMsgRegister, DEFAULT_ACTOR_REGISTRY};
 use crate::actor::HasCancellationToken::HasCancellationToken;
 
