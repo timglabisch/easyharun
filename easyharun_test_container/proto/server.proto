@@ -3,15 +3,19 @@ package server;
 
 service ContainerService {
   rpc get_status(GetStatusRequest) returns (GetStatusResponse);
+  rpc kill_server(KillServerRequest) returns (KillServerResponse);
+  rpc make_healthcheck_pass(MakeHealthcheckPassRequest) returns (MakeHealthcheckPassResponse);
+  rpc make_healthcheck_fail(MakeHealthcheckFailRequest) returns (MakeHealthcheckFailResponse);
 }
 
-enum ContainerStatusEnum {
-  RUNNING = 0;
-  READY = 1;
-}
+message KillServerRequest {}
+message KillServerResponse {}
+message MakeHealthcheckPassRequest {}
+message MakeHealthcheckPassResponse {}
+message MakeHealthcheckFailRequest {}
+message MakeHealthcheckFailResponse {}
 
-message GetStatusRequest {
-}
+message GetStatusRequest {}
 
 message GetStatusResponse {
   uint64 id = 1;
