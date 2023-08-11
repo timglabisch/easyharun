@@ -12,6 +12,7 @@ prost = "0.11"
 async-trait = "*"
 anyhow = "*"
 axum = "0.6.*"
+rand = "0.*"
 
 [lib]
 name = "easyharun_test_container"
