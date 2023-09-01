@@ -10,7 +10,7 @@ use easyact::{Actor, ActorState};
 use easyharun_lib::config::Config;
 
 use easyharun_lib::portmapping::{PortMapping};
-use crate::config::config_provider::config_get;
+use crate::config::config_provider::{ConfigReader};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::docker::docker_world_builder::{build_world_container, docker_container_info};
 
@@ -24,6 +24,7 @@ use crate::proxy::world::{ProxyWorld, ProxyWorldEntry, ProxyWorlds};
 pub struct ProxyManager {
     proxies: HashMap<String, ProxyHandle>,
     actor_state: ActorState<()>,
+    config_reader: ConfigReader,
 }
 
 #[async_trait]
@@ -150,16 +151,17 @@ impl ProxyManager {
         })
     }
 
-    pub fn new(actor_state: ActorState<()>) -> Self {
+    pub fn new(actor_state: ActorState<()>, config_reader: ConfigReader) -> Self {
         Self {
             actor_state,
             proxies: HashMap::new(),
+            config_reader
         }
     }
 
     pub async fn run_inner(&mut self) -> Result<(), ::anyhow::Error> {
 
-        let config = config_get();
+        let config =self.config_reader.get_copy().await;
 
         let worlds = ProxyWorlds {
             current: self.create_proxy_world_current(),

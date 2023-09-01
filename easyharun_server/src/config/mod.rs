@@ -8,16 +8,14 @@ use futures::{
     channel::mpsc::{channel, Receiver},
     SinkExt, StreamExt,
 };
-use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher, Config};
+use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
-use tracing::info;
-use crate::config::config_provider::config_set;
+use easyharun_lib::config::Config;
 
 impl ConfigMonitor {
 
-    pub async fn load_config() {
-        config_set(crate::Config::read_from_file("./example/basic/easyharun.toml").await.expect("could not read config"));
-        info!("loaded config.");
+    pub async fn load_config() -> Config {
+        crate::Config::read_from_file("./example/basic/easyharun.toml").await.expect("could not read config")
     }
 
     fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
@@ -29,7 +27,7 @@ impl ConfigMonitor {
             futures::executor::block_on(async {
                 tx.send(res).await.unwrap();
             })
-        }, Config::default())?;
+        }, ::notify::Config::default())?;
 
         Ok((watcher, rx))
     }

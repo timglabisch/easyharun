@@ -42,7 +42,7 @@ pub struct ConfigContainer {
     pub proxies: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub proxy: Vec<ConfigFileProxy>,
     pub container: Vec<ConfigContainer>,

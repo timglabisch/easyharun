@@ -9,7 +9,7 @@ use tracing::{info, warn};
 use easyact::{Actor, ActorConfig, ActorState, ActorStateHandle};
 use easyharun_lib::config::{Config, ConfigFileHealthCheck};
 use easyharun_lib::ContainerId;
-use crate::config::config_provider::config_get;
+use crate::config::config_provider::{ConfigReader};
 use crate::container_manager::world::WorldContainer;
 use crate::docker::docker_world_builder::build_world_from_docker;
 use crate::health_check::{HealthCheckMsgRecv, HealthCheckMsgRecvCheckFailed, HealthCheckMsgRecvCheckOk};
@@ -42,14 +42,16 @@ impl HealthCheck {
 
 pub struct HealthCheckManager {
     health_checks: HashMap<ContainerId, Vec<(String, HealthCheck)>>,
-    actor_state: ActorState<HealthCheckMsgRecv>
+    actor_state: ActorState<HealthCheckMsgRecv>,
+    config_reader: ConfigReader,
 }
 
 impl HealthCheckManager {
-    pub fn new(actor_state: ActorState<HealthCheckMsgRecv>) -> Self {
+    pub fn new(actor_state: ActorState<HealthCheckMsgRecv>, config_reader: ConfigReader) -> Self {
         Self {
             health_checks: HashMap::new(),
-            actor_state
+            actor_state,
+            config_reader
         }
     }
 }
@@ -102,7 +104,7 @@ impl HealthCheckManager {
     pub async fn run_inner_maintain_checks(&mut self) -> Result<(), ::anyhow::Error> {
         let container_world = build_world_from_docker().await.context("check docker")?;
 
-        let config = config_get();
+        let config = self.config_reader.get_copy().await;
 
         let container_ids_that_have_checks_running = {
             let mut buf = HashSet::new();

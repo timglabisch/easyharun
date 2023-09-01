@@ -1,9 +1,9 @@
 
-use crate::config::config_provider::config_get;
+use crate::config::config_provider::{ConfigReader};
 use crate::container_manager::world::{World, WorldContainer};
 
-pub async fn build_world_from_config() -> Result<World, ::anyhow::Error> {
-    let config = config_get();
+pub async fn build_world_from_config(config_reader : &ConfigReader) -> Result<World, ::anyhow::Error> {
+    let config = config_reader.get_copy().await;
 
     let mut containers = vec![];
 

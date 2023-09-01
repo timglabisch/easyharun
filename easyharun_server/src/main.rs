@@ -18,6 +18,7 @@ use crate::container_manager::ContainerManager;
 use crate::health_check::health_check_manager::HealthCheckManager;
 use crate::proxy::proxy_manager::ProxyManager;
 use easyact::{Actor, actor_run_grpc_server, ActorConfig, ActorRegistry};
+use crate::config::config_provider::ConfigProvider;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "example", about = "An example of StructOpt usage.")]
@@ -30,7 +31,7 @@ pub async fn main() {
 
     tracing_subscriber::fmt::init();
 
-    ConfigMonitor::load_config().await;
+    let (config_reader, config_writer) = ConfigProvider::new(ConfigMonitor::load_config().await);
 
     let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
     registry_actor.register_as_default();
@@ -44,13 +45,22 @@ pub async fn main() {
         ConfigMonitor::async_watch().await
     });
 
-    let (jh_proxymanager, handle_proxymanager, _) = Actor::spawn(ActorConfig::new("ProxyManager", "Manager").build(), |actor_state| ProxyManager::new(actor_state));
+    let (jh_proxymanager, handle_proxymanager, _) = Actor::spawn(ActorConfig::new("ProxyManager", "Manager").build(), |actor_state| ProxyManager::new(
+        actor_state,
+        config_reader.clone()
+    ));
 
 
-    let (jh_containermanager, handle_containermanager, _) = Actor::spawn(ActorConfig::new("ContainerManager", "Manager").build(), |actor_state| ContainerManager { actor_state });
+    let (jh_containermanager, handle_containermanager, _) = Actor::spawn(ActorConfig::new("ContainerManager", "Manager").build(), |actor_state| ContainerManager {
+        actor_state,
+        config_reader: config_reader.clone()
+    });
 
 
-    let (jh_healh_check_manager, handle_healh_check_manager, _) = Actor::spawn(ActorConfig::new("HealthCheckManager", "Manager").build(), |actor_state| HealthCheckManager::new(actor_state));
+    let (jh_healh_check_manager, handle_healh_check_manager, _) = Actor::spawn(ActorConfig::new("HealthCheckManager", "Manager").build(), |actor_state| HealthCheckManager::new(
+        actor_state,
+        config_reader.clone()
+    ));
 
 
     ::tokio::select! {

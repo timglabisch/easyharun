@@ -1,16 +1,43 @@
-use std::sync::{RwLock};
-use lazy_static::lazy_static;
+use std::sync::Arc;
+use tokio::sync::{RwLock};
 use easyharun_lib::config::Config;
 
-lazy_static! {
-    static ref CONFIG : RwLock<Option<Config>> = RwLock::new(None);
+pub struct ConfigProvider;
+
+impl ConfigProvider {
+    pub fn new(config: Config) -> (ConfigReader, ConfigReaderWriter) {
+        let arc = Arc::new(RwLock::new(config));
+
+        (
+            ConfigReader {config: arc.clone()},
+            ConfigReaderWriter {config: arc},
+        )
+    }
 }
 
-pub fn config_set(config : Config) {
-    let mut lock = CONFIG.write().expect("could not read config lock");
-    *lock = Some(config);
+#[derive(Clone, Debug)]
+pub struct ConfigReader {
+    config: Arc<RwLock<Config>>,
 }
 
-pub fn config_get() -> Config {
-    CONFIG.read().expect("could not read config lock").as_ref().expect("could not read config").clone()
+#[derive(Clone, Debug)]
+pub struct ConfigReaderWriter {
+    config: Arc<RwLock<Config>>,
+}
+
+impl ConfigReader {
+    pub async fn get_copy(&self) -> Config {
+        self.config.read().await.clone()
+    }
+}
+
+impl ConfigReaderWriter {
+    pub async fn get_copy(&self) -> Config {
+        self.config.read().await.clone()
+    }
+
+    pub async fn set(&self, config : Config) {
+        let mut w = self.config.write().await;
+        *w = config;
+    }
 }

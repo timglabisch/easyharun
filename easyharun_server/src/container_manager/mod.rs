@@ -8,11 +8,14 @@ use crate::container_manager::world::Worlds;
 use crate::docker::docker_action_executer::DockerActionExecuter;
 use crate::docker::docker_world_builder::build_world_from_docker;
 use async_trait::async_trait;
+use crate::config::config_provider::ConfigReader;
+
 pub mod world;
 
 #[derive(Debug)]
 pub struct ContainerManager {
     pub actor_state: ActorState<()>,
+    pub config_reader: ConfigReader,
 }
 
 
@@ -32,7 +35,7 @@ impl Actor for ContainerManager {
     async fn on_timer(&mut self) -> Result<(), Error> {
 
         let worlds = Worlds {
-            expected: build_world_from_config().await.context("could not build world from config")?,
+            expected: build_world_from_config(&self.config_reader).await.context("could not build world from config")?,
             current: build_world_from_docker().await.context("could not build world from docker")?
         };
 
