@@ -22,7 +22,7 @@ pub struct ConfigFileProxy {
     pub listen: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ConfigFileContainer {
     pub name: String,
     pub image: String,
@@ -32,7 +32,7 @@ pub struct ConfigFileContainer {
     pub proxies: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ConfigContainer {
     pub name: String,
     pub image: String,
@@ -42,7 +42,7 @@ pub struct ConfigContainer {
     pub proxies: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Config {
     pub proxy: Vec<ConfigFileProxy>,
     pub container: Vec<ConfigContainer>,

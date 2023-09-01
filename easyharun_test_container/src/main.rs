@@ -23,7 +23,7 @@ pub enum MainMsg {
 async fn main() -> Result<(), ::anyhow::Error> {
 
     let server_info = ServerInfo {
-        name: ::std::env::var("SERVER_NAME").expect("env server name must be given"),
+        name: ::std::env::var("SERVER_NAME").unwrap_or("TEST_SERVER_NAME".to_string()),
         id: {
             let mut rng = rand::thread_rng();
             rng.gen::<f64>().to_string()
