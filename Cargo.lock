@@ -396,6 +396,7 @@ dependencies = [
  "reqwest",
  "structopt",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
  "uuid",
