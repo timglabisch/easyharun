@@ -15,7 +15,7 @@ pub struct DockerRunningContainerInfo {
     pub container_id: ContainerId,
 }
 
-pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunningContainerInfo> {
+pub async fn docker_container_info(container: &ContainerSummary, kv : &KV) -> Option<DockerRunningContainerInfo> {
 
     let labels = match &container.labels {
         None => return None,
@@ -61,7 +61,7 @@ pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunni
         }
     });
 
-    if KV::is_container_marked_to_be_deleted(&container_id) {
+    if kv.is_container_marked_to_be_deleted(&container_id).await {
         return None;
     }
 
@@ -70,7 +70,7 @@ pub fn docker_container_info(container: &ContainerSummary) -> Option<DockerRunni
     });
 }
 
-pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
+pub async fn build_world_from_docker(kv : &KV) -> Result<World, ::anyhow::Error> {
     trace!("starting to check the docker world");
 
     let docker = docker_create_connection()?;
@@ -87,7 +87,7 @@ pub async fn build_world_from_docker() -> Result<World, ::anyhow::Error> {
     let mut world_containers = vec![];
     for container in containers.iter() {
 
-        let container_id = match docker_container_info(&container) {
+        let container_id = match docker_container_info(&container, kv).await {
             Some(s) => s.container_id,
             None => {
                 continue

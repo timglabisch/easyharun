@@ -22,6 +22,7 @@ pub struct TcpProxy {
     stats_requests_all: u64,
     recv: UnboundedReceiver<ProxyBrainAction>,
     actor_state: ActorTaskState,
+    kv: KV,
 }
 
 #[async_trait]
@@ -48,7 +49,7 @@ impl ActorTask for TcpProxy {
                     self.handle_action(action);
                 },
                 accept = listener.accept() => {
-                    self.handle_accept(accept);
+                    self.handle_accept(accept).await;
                 }
             }
         }
@@ -59,12 +60,12 @@ impl TcpProxy {
 
     pub fn spawn_and_create_handle(
         listen_addr: String,
+        kv: KV,
     ) -> ProxyHandle {
 
         let (sender, recv) = ::tokio::sync::mpsc::unbounded_channel::<ProxyBrainAction>();
 
         let listen_addr_clone = listen_addr.to_string();
-
 
         let jh = ActorTask::spawn(ActorTaskConfig::new(
             format!("Tcp Proxy {}", &listen_addr),
@@ -74,7 +75,8 @@ impl TcpProxy {
             server_addrs: vec![],
             stats_requests_all: 0,
             recv,
-            actor_state
+            actor_state,
+            kv
         });
 
         ProxyHandle::new(
@@ -103,7 +105,7 @@ impl TcpProxy {
         self.server_addrs.retain(|x| x != &action.server_addr);
     }
 
-    fn pick_server(&self) -> Result<String, ::anyhow::Error> {
+    async fn pick_server(&self) -> Result<String, ::anyhow::Error> {
         let server_addrs_len = self.server_addrs.len() as u64;
 
         if server_addrs_len == 0 {
@@ -119,7 +121,7 @@ impl TcpProxy {
 
 
             // todo, the read lock might be expensive.
-            if !KV::is_target_healthy(server) {
+            if !self.kv.is_target_healthy(server).await {
                 info!("skip (unhealthy) {}", server);
                 continue;
             }
@@ -127,13 +129,12 @@ impl TcpProxy {
             return Ok(self.server_addrs[id].to_string());
         }
 
-        // todo, deleted servers?
         warn!("all servers are unhealthy, we pick the first one.");
         let id = ((self.stats_requests_all) % server_addrs_len) as usize;
         Ok(self.server_addrs[id].to_string())
     }
 
-    fn handle_accept(&mut self, data : Result<(TcpStream, std::net::SocketAddr), std::io::Error>) -> Result<(), ::anyhow::Error> {
+    async fn handle_accept(&mut self, data : Result<(TcpStream, std::net::SocketAddr), std::io::Error>) -> Result<(), ::anyhow::Error> {
 
         self.stats_requests_all += 1;
 
@@ -145,17 +146,20 @@ impl TcpProxy {
             }
         };
 
-        let backend_server_addr = self.pick_server().context("could not pick a backend server")?;
+        let backend_server_addr = self.pick_server().await.context("could not pick a backend server")?;
 
-        println!("accept {backend_server_addr}");
+        ::tokio::spawn(async move {
 
-        let transfer = Self::transfer(inbound, backend_server_addr).map(|r| {
-            if let Err(e) = r {
-                println!("Failed to transfer; error={}", e);
-            }
+            println!("accept {backend_server_addr}");
+
+            match Self::transfer(inbound, backend_server_addr).await {
+                Err(e) => {
+                    println!("Failed to transfer; error={}", e);
+                }
+                Ok(_) => {}
+            };
+
         });
-
-        tokio::spawn(transfer);
 
         Ok(())
     }

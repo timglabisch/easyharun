@@ -11,6 +11,7 @@ use futures::{
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use easyharun_lib::config::Config;
+use crate::config::config_provider::ConfigReaderWriter;
 
 impl ConfigMonitor {
 
@@ -32,7 +33,7 @@ impl ConfigMonitor {
         Ok((watcher, rx))
     }
 
-    pub async fn async_watch() -> notify::Result<()> {
+    pub async fn async_watch(config_writer : ConfigReaderWriter) -> notify::Result<()> {
         let (mut watcher, mut rx) = Self::async_watcher()?;
 
         // Add a path to be watched. All files and directories at that path and
@@ -42,7 +43,7 @@ impl ConfigMonitor {
         while let Some(res) = rx.next().await {
             match res {
                 Ok(event) => {
-                    Self::load_config().await;
+                    config_writer.set(Self::load_config().await).await
                 },
                 Err(e) => println!("watch error: {:?}", e),
             }

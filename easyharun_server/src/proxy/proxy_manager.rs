@@ -13,6 +13,7 @@ use easyharun_lib::portmapping::{PortMapping};
 use crate::config::config_provider::{ConfigReader};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::docker::docker_world_builder::{build_world_container, docker_container_info};
+use crate::kv_container::KV;
 
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
 use crate::proxy::proxy_implementation::proxy_handle::ProxyHandle;
@@ -25,6 +26,7 @@ pub struct ProxyManager {
     proxies: HashMap<String, ProxyHandle>,
     actor_state: ActorState<()>,
     config_reader: ConfigReader,
+    kv: KV,
 }
 
 #[async_trait]
@@ -66,7 +68,7 @@ impl ProxyManager {
         }
     }
 
-    pub async fn create_proxy_world_expected(config : &Config) -> Result<ProxyWorld, ::anyhow::Error> {
+    async fn create_proxy_world_expected(&self, config : &Config) -> Result<ProxyWorld, ::anyhow::Error> {
 
         let docker = docker_create_connection().context("docker connection?")?;
 
@@ -84,7 +86,7 @@ impl ProxyManager {
 
         for container in containers.iter() {
 
-            let container_id = match docker_container_info(&container) {
+            let container_id = match docker_container_info(&container, &self.kv).await {
                 Some(s) => s.container_id,
                 None => {
                     continue
@@ -151,11 +153,12 @@ impl ProxyManager {
         })
     }
 
-    pub fn new(actor_state: ActorState<()>, config_reader: ConfigReader) -> Self {
+    pub fn new(actor_state: ActorState<()>, config_reader: ConfigReader, kv: KV) -> Self {
         Self {
             actor_state,
             proxies: HashMap::new(),
-            config_reader
+            config_reader,
+            kv
         }
     }
 
@@ -165,7 +168,7 @@ impl ProxyManager {
 
         let worlds = ProxyWorlds {
             current: self.create_proxy_world_current(),
-            expected: Self::create_proxy_world_expected(&config).await?
+            expected: self.create_proxy_world_expected(&config).await?
         };
 
         let actions = ProxyBrain::think(&worlds);
@@ -215,7 +218,7 @@ impl ProxyManager {
                 o.get_mut().send(ProxyBrainAction::Add(action))?;
             },
             Vacant(o) => {
-                let mut proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string());
+                let mut proxy = TcpProxy::spawn_and_create_handle(action.listen_addr.to_string(), self.kv.clone());
                 info!(listen_addr = action.listen_addr,"creating proxy server");
                 info!(listen_addr = action.listen_addr, server_addr = action.server_addr,"adding server to to proxy");
                 proxy.send(ProxyBrainAction::Add(action))?;

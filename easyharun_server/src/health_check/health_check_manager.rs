@@ -44,14 +44,16 @@ pub struct HealthCheckManager {
     health_checks: HashMap<ContainerId, Vec<(String, HealthCheck)>>,
     actor_state: ActorState<HealthCheckMsgRecv>,
     config_reader: ConfigReader,
+    kv: KV,
 }
 
 impl HealthCheckManager {
-    pub fn new(actor_state: ActorState<HealthCheckMsgRecv>, config_reader: ConfigReader) -> Self {
+    pub fn new(actor_state: ActorState<HealthCheckMsgRecv>, config_reader: ConfigReader, kv: KV) -> Self {
         Self {
             health_checks: HashMap::new(),
             actor_state,
-            config_reader
+            config_reader,
+            kv
         }
     }
 }
@@ -91,18 +93,18 @@ impl HealthCheckManager {
 
     pub async fn on_health_check_failed(&self, msg : HealthCheckMsgRecvCheckFailed) -> Result<(), ::anyhow::Error> {
         info!("health check failed {:?}", msg);
-        KV::mark_container_target_healthy(&msg.container_id, &msg.target, false);
+        self.kv.mark_container_target_healthy(&msg.container_id, &msg.target, false).await;
         Ok(())
     }
 
     pub async fn on_health_check_ok(&self, msg : HealthCheckMsgRecvCheckOk) -> Result<(), ::anyhow::Error> {
         info!("health check ok {:?}", msg);
-        KV::mark_container_target_healthy(&msg.container_id, &msg.target, true);
+        self.kv.mark_container_target_healthy(&msg.container_id, &msg.target, true).await;
         Ok(())
     }
 
     pub async fn run_inner_maintain_checks(&mut self) -> Result<(), ::anyhow::Error> {
-        let container_world = build_world_from_docker().await.context("check docker")?;
+        let container_world = build_world_from_docker(&self.kv).await.context("check docker")?;
 
         let config = self.config_reader.get_copy().await;
 

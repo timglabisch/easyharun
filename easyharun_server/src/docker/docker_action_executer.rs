@@ -11,29 +11,37 @@ use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 use futures::StreamExt;
 
-pub struct DockerActionExecuter;
+pub struct DockerActionExecuter {
+    kv: KV,
+}
+
 
 impl DockerActionExecuter {
-    #[tracing::instrument]
-    pub async fn execute(action: &BrainAction) -> Result<(), ::anyhow::Error> {
+    pub fn new(kv: KV) -> Self {
+        Self {
+            kv
+        }
+    }
+
+    pub async fn execute(&self, action: &BrainAction) -> Result<(), ::anyhow::Error> {
         match action {
-            BrainAction::ContainersStart(c) => return Self::execute_containers_start(c).await,
-            BrainAction::ContainersStop(c) => return Self::execute_containers_stop(c).await,
+            BrainAction::ContainersStart(c) => return self.execute_containers_start(c).await,
+            BrainAction::ContainersStop(c) => return self.execute_containers_stop(c).await,
             BrainAction::NoOp => Ok(()),
         }
     }
 
-    async fn execute_containers_start(action: &Vec<ContainerStart>) -> Result<(), ::anyhow::Error> {
+    async fn execute_containers_start(&self, action: &Vec<ContainerStart>) -> Result<(), ::anyhow::Error> {
         let docker = docker_create_connection()?;
 
         for container_start in action.iter() {
-            Self::execute_container_start(&docker, container_start).await.context("starting docker container")?
+            self.execute_container_start(&docker, container_start).await.context("starting docker container")?
         }
 
         Ok(())
     }
 
-    async fn execute_container_start(docker: &Docker, container_start: &ContainerStart) -> Result<(), ::anyhow::Error> {
+    async fn execute_container_start(&self, docker: &Docker, container_start: &ContainerStart) -> Result<(), ::anyhow::Error> {
         debug!("execute_containers_start");
 
         let container = &container_start.container_world;
@@ -112,20 +120,20 @@ impl DockerActionExecuter {
     }
 
 
-    async fn execute_containers_stop(action: &Vec<ContainerStop>) -> Result<(), ::anyhow::Error> {
+    async fn execute_containers_stop(&self, action: &Vec<ContainerStop>) -> Result<(), ::anyhow::Error> {
         let docker = docker_create_connection()?;
 
         for container_stop in action.iter() {
-            Self::execute_container_stop(container_stop).await?
+            self.execute_container_stop(container_stop).await?
         }
 
         Ok(())
     }
 
-    async fn execute_container_stop(container: &ContainerStop) -> Result<(), ::anyhow::Error> {
+    async fn execute_container_stop(&self, container: &ContainerStop) -> Result<(), ::anyhow::Error> {
 
         info!("execute_containers_stop");
-        KV::mark_container_to_be_deleted(&container.id);
+        self.kv.mark_container_to_be_deleted(&container.id).await;
 
         Ok(())
     }

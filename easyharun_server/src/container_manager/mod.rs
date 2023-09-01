@@ -9,6 +9,7 @@ use crate::docker::docker_action_executer::DockerActionExecuter;
 use crate::docker::docker_world_builder::build_world_from_docker;
 use async_trait::async_trait;
 use crate::config::config_provider::ConfigReader;
+use crate::kv_container::KV;
 
 pub mod world;
 
@@ -16,6 +17,7 @@ pub mod world;
 pub struct ContainerManager {
     pub actor_state: ActorState<()>,
     pub config_reader: ConfigReader,
+    pub kv: KV,
 }
 
 
@@ -36,7 +38,7 @@ impl Actor for ContainerManager {
 
         let worlds = Worlds {
             expected: build_world_from_config(&self.config_reader).await.context("could not build world from config")?,
-            current: build_world_from_docker().await.context("could not build world from docker")?
+            current: build_world_from_docker(&self.kv).await.context("could not build world from docker")?
         };
 
         debug!("created worlds");
@@ -44,7 +46,7 @@ impl Actor for ContainerManager {
         let next_action = Brain::think_about_next_action(&worlds).context("brain error, could not resolve brain action.")?;
 
         info!("execute action {:?}", next_action);
-        DockerActionExecuter::execute(&next_action).await.context("docker action executer")?;
+        DockerActionExecuter::new(self.kv.clone()).execute(&next_action).await.context("docker action executer")?;
 
         Ok(())
 
