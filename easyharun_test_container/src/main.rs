@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use tokio::signal::unix::{signal, SignalKind};
 use tonic::transport::Server;
 use crate::container_service_grpc::ContainerServiceImpl;
 use crate::health_check_http_server::HealthCheckHttpServer;
@@ -49,6 +50,9 @@ async fn main() -> Result<(), ::anyhow::Error> {
 
     println!("booted, health check is running at http://127.0.0.1:3000");
 
+    let mut sig_quit = signal(SignalKind::quit())?;
+    let mut sig_term = signal(SignalKind::terminate())?;
+
     loop {
         ::tokio::select! {
             _ = &mut jh_health_check => {
@@ -64,6 +68,18 @@ async fn main() -> Result<(), ::anyhow::Error> {
                         return Ok(());
                     }
                 }
+            },
+            _ = sig_quit.recv() => {
+                println!("Signal quit, quit.");
+                return Ok(());
+            },
+            _ = sig_term.recv() => {
+                println!("Signal term, quit.");
+                return Ok(());
+            }
+            _ = ::tokio::signal::ctrl_c() => {
+                println!("Signal ctrl_c, quit.");
+                return Ok(());
             }
         }
     }
