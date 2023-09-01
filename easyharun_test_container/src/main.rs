@@ -14,6 +14,10 @@ pub struct ServerInfo {
     id: String,
 }
 
+pub enum MainMsg {
+    Kill
+}
+
 #[tokio::main]
 async fn main() -> Result<(), ::anyhow::Error> {
 
@@ -25,12 +29,42 @@ async fn main() -> Result<(), ::anyhow::Error> {
         }
     };
 
-    HealthCheckHttpServer::run(server_info.clone()).await;
+    let (main_channel_sender, mut main_channel_recv) = ::tokio::sync::mpsc::channel::<MainMsg>(100);
 
-    Server::builder()
-        .add_service(ContainerServiceServer::new(ContainerServiceImpl::new(server_info)))
-        .serve("0.0.0.0:5345".parse()?)
-        .await?;
+    let jh_health_check_server_info = server_info.clone();
+    let mut jh_health_check = ::tokio::spawn (async move {
+        HealthCheckHttpServer::run(jh_health_check_server_info.clone()).await;
+    });
 
-    Ok(())
+    let jh_server_server_info = server_info.clone();
+    let jh_sever_main_channel_sender = main_channel_sender.clone();
+    let mut jh_server = ::tokio::spawn(async move {
+        Server::builder()
+            .add_service(ContainerServiceServer::new(ContainerServiceImpl::new(
+                jh_server_server_info,
+                jh_sever_main_channel_sender
+            )))
+            .serve("0.0.0.0:5345".parse().expect("...")).await
+    });
+
+    println!("booted, health check is running at http://127.0.0.1:3000");
+
+    loop {
+        ::tokio::select! {
+            _ = &mut jh_health_check => {
+                eprintln!("health check crashed");
+            },
+            _ = &mut jh_server => {
+                eprintln!("server check crashed");
+            },
+            msg = main_channel_recv.recv() => {
+                match (msg) {
+                    None => {},
+                    Some(MainMsg::Kill) => {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
 }
