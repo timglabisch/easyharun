@@ -8,6 +8,7 @@ mod brain;
 mod kv_container;
 mod proxy;
 mod health_check;
+mod _test_integration;
 
 use structopt::StructOpt;
 use easyharun_lib::config::Config;
