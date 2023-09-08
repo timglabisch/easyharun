@@ -13,11 +13,11 @@ mod integration_test {
             proxy: vec![
                 ConfigFileProxy {
                     name: "foo_grpc".to_string(),
-                    listen: "http://127.0.0.1:5345".to_string(),
+                    listen: "127.0.0.1:5345".to_string(),
                 },
                 ConfigFileProxy {
                     name: "foo_health".to_string(),
-                    listen: "http://127.0.0.1:3000".to_string(),
+                    listen: "127.0.0.1:3000".to_string(),
                 }
             ],
             health_check: vec![

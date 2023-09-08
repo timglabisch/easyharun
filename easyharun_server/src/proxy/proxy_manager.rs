@@ -128,7 +128,7 @@ impl ProxyManager {
 
                 let portmapping = PortMapping {
                     listen_addr: config_proxy.listen.to_string(),
-                    server_addr: format!("127.0.0.1:{}", dynamic_port.internal),
+                    server_addr: format!("127.0.0.1:{}", dynamic_port.dynamic),
                 };
 
                 match proxies.entry(portmapping.listen_addr.to_string()) {
