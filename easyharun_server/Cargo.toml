@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 easyharun_lib = {path = "./../easyharun_lib"}
+easyharun_test_container = {path = "./../easyharun_test_container"}
 easyact = {path = "./../easyact"}
 tokio = {version = "1.*", features=["full"]}
 tokio-util = "0.7.*"

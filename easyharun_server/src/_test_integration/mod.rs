@@ -2,6 +2,7 @@
 mod integration_test {
     use std::time::Duration;
     use easyharun_lib::config::{Config, ConfigContainer};
+    use easyharun_test_container::TestClient;
     use crate::config::config_provider::ConfigProvider;
     use crate::Core;
 
@@ -25,6 +26,8 @@ mod integration_test {
         let (_, core) = Core::spawn(config_reader);
 
         ::tokio::time::sleep(Duration::from_secs(100)).await;
+
+        let x = TestClient::connect("foo", Duration::from_secs(10)).await;
 
         let result = 2 + 2;
         assert_eq!(result, 4);

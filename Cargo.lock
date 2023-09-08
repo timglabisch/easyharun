@@ -390,6 +390,7 @@ dependencies = [
  "bollard",
  "easyact",
  "easyharun_lib",
+ "easyharun_test_container",
  "futures",
  "lazy_static",
  "notify",
