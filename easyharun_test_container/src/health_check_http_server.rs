@@ -13,8 +13,9 @@ pub struct HealthCheckHttpServer {}
 
 pub async fn handle_request(
     State(server_info): State<ServerInfo>
-) -> (StatusCode, &'static str) {
-    (StatusCode::from_u16(HTTP_HEALTH_CHECK_STATUS_CODE.load(Ordering::Relaxed)).expect("invalid status code"), "Check")
+) -> (StatusCode, String) {
+    let code = HTTP_HEALTH_CHECK_STATUS_CODE.load(Ordering::Relaxed);
+    (StatusCode::from_u16(code).expect("invalid status code"), format!("Check {}", code))
 }
 
 impl HealthCheckHttpServer {

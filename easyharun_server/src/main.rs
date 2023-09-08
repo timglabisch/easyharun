@@ -76,6 +76,8 @@ impl Core {
 
         let mut grpc_debug = OptionFuture::from(None);
         if debug {
+            tracing_subscriber::fmt::init();
+
             let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
             registry_actor.register_as_default();
             grpc_debug = OptionFuture::from(Some(

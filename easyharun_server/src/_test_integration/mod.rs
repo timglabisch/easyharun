@@ -2,6 +2,7 @@
 mod integration_test {
     use std::time::Duration;
     use easyharun_lib::config::{Config, ConfigContainer, ConfigContainerProxy, ConfigFileHealthCheck, ConfigFileProxy};
+    use easyharun_test_container::proto::{GetStatusRequest, KillServerRequest, MakeHealthcheckFailRequest};
     use easyharun_test_container::TestClient;
     use crate::config::config_provider::ConfigProvider;
     use crate::Core;
@@ -52,9 +53,16 @@ mod integration_test {
 
         let (_, core) = Core::spawn(config_reader, true);
 
-        ::tokio::time::sleep(Duration::from_secs(1000)).await;
+        ::tokio::time::sleep(Duration::from_secs(1)).await;
 
-        let x = TestClient::connect("foo", Duration::from_secs(10)).await;
+        let mut x = TestClient::connect("http://127.0.0.1:5345", Duration::from_secs(10)).await.expect("could not get test client");
+
+        // x.make_healthcheck_fail(MakeHealthcheckFailRequest {}).await.expect("could not send kill");
+
+        println!("status: {:?}", x.get_status(GetStatusRequest {}).await);
+
+        let a = 0;
+        ::tokio::time::sleep(Duration::from_secs(1000)).await;
 
         let result = 2 + 2;
         assert_eq!(result, 4);

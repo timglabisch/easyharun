@@ -42,7 +42,7 @@ impl ContainerService for ContainerServiceImpl {
     }
 
     async fn make_healthcheck_fail(&self, _request: Request<MakeHealthcheckFailRequest>) -> Result<Response<MakeHealthcheckFailResponse>, Status> {
-        HTTP_HEALTH_CHECK_STATUS_CODE.store(200, Relaxed);
+        HTTP_HEALTH_CHECK_STATUS_CODE.store(500, Relaxed);
         Ok(Response::new(MakeHealthcheckFailResponse {}))
     }
 }
