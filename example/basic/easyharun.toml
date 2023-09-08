@@ -7,7 +7,7 @@ listen = "0.0.0.0:89"
 replicas = 1
 name = "nginx"
 image = "nginx:latest"
-container_port = 80
+container_ports = [80]
 health_checks = ["http"]
 proxies = ["http"]
 
@@ -15,7 +15,7 @@ proxies = ["http"]
 replicas = 2
 name = "apache"
 image = "httpd:2.4"
-container_port = 80
+container_ports = [80]
 health_checks = ["http"]
 proxies = ["http"]
 

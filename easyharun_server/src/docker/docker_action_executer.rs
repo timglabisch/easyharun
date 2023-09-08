@@ -67,7 +67,7 @@ impl DockerActionExecuter {
             buf.insert("easyharun_name".to_string(), container.name.to_string());
             buf.insert("easyharun_image".to_string(), container.image.to_string());
             buf.insert("easyharun_replica_id".to_string(), container.replica_id.to_string());
-            buf.insert("easyharun_container_port".to_string(), container.container_port.to_string());
+            buf.insert("easyharun_container_ports".to_string(), container.container_ports.iter().map(|x|x.to_string()).collect::<Vec<_>>().join(","));
             buf.insert("easyharun_health_checks".to_string(), container.health_checks.join(","));
             buf.insert("easyharun_proxies".to_string(), container.proxies.join(","));
 
@@ -75,13 +75,26 @@ impl DockerActionExecuter {
         };
 
         let mut port_bindings = ::std::collections::HashMap::new();
-        port_bindings.insert(
-            format!("{}", container.container_port),
-            Some(vec![PortBinding {
-                host_ip: Some(String::from("0.0.0.0")),
-                host_port: None, // we let the os pick the port
-            }]),
-        );
+        for port in container.container_ports.iter() {
+            port_bindings.insert(
+                format!("{}", port),
+                Some(vec![PortBinding {
+                    host_ip: Some(String::from("0.0.0.0")),
+                    host_port: None, // we let the os pick the port
+                }]),
+            );
+        }
+
+        let exposed_ports = {
+            let mut exposed_ports = HashMap::new();
+
+            for port in container.container_ports.iter() {
+                let empty = HashMap::<(), ()>::new();
+                let exposed_port = format!("{}", port);
+                exposed_ports.insert(exposed_port, empty);
+            }
+            exposed_ports
+        };
 
         let config = Config {
             image: Some(container.image.clone()),
@@ -90,14 +103,7 @@ impl DockerActionExecuter {
                 port_bindings: Some(port_bindings),
                 ..Default::default()
             }),
-            exposed_ports: Some({
-                let mut exposed_ports = HashMap::new();
-
-                let empty = HashMap::<(), ()>::new();
-                let exposed_port = format!("{}", container.container_port);
-                exposed_ports.insert(exposed_port, empty);
-                exposed_ports
-            }),
+            exposed_ports: Some(exposed_ports),
             ..Default::default()
         };
 

@@ -201,15 +201,24 @@ impl HealthCheckManager {
     }
 
     pub fn template_parse_world_container(template: &str, world_container: &WorldContainer) -> Result<String, ::anyhow::Error> {
-        Ok(
-            template
-            .replace("{{ ", "{{")
-            .replace(" }}", "}}")
-            .replace(
-                "{{container.port_dynamic_host}}",
-                world_container.container_port_dynamic_host.context("get container_port_dynamic_host")?.to_string().as_str()
-            )
-        )
+        let mut template = template.to_string();
+
+        let port_mapping = match &world_container.container_port_mapping {
+            Some(s) => s,
+            None => return Err(anyhow!("get container_port_dynamic_host"))
+        };
+
+        for port in port_mapping {
+            template = template
+                .replace("{{ ", "{{")
+                .replace(" }}", "}}")
+                .replace(
+                    &format!("{}{}{}", "{{container.port_dynamic_host_", port.internal.to_string(), "}}"),
+                    port.dynamic.to_string().as_str()
+                );
+        }
+
+        Ok(template)
     }
 
     pub fn build_health_check(&self, world_container: &WorldContainer, health_check_name: &str, config: &Config) -> Result<HealthCheck, ::anyhow::Error> {

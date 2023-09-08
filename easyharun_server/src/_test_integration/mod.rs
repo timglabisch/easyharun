@@ -15,7 +15,7 @@ mod integration_test {
                     name: "foo".to_string(),
                     image: "easyharun_test_container".to_string(),
                     replica_id: 1,
-                    container_port: 123,
+                    container_ports: vec![123],
                     health_checks: vec!["check".to_string()],
                     proxies: vec!["proxy".to_string()]
                 }

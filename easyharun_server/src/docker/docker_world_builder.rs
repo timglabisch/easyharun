@@ -110,17 +110,28 @@ pub async fn build_world_from_docker(kv : &KV) -> Result<World, ::anyhow::Error>
     Ok(World::new(world_containers))
 }
 
-pub fn extract_dynamic_port_form_container(container_summary : &ContainerSummary) -> Result<u32, ::anyhow::Error> {
-    match container_summary.ports.clone() {
-        Some(s) => match s.first() {
-            Some(p) => match p.public_port {
-                None => return Err(anyhow!("public port not given")),
-                Some(public_port) => return Ok(public_port as u32)
-            },
-            None => return Err(anyhow!("container without port #2"))
-        },
+#[derive(Debug, Clone)]
+pub struct PortInternalDynamic {
+    pub internal: u32,
+    pub dynamic: u32, // port the host can access...
+}
+
+pub fn extract_dynamic_port_form_container(container_summary : &ContainerSummary) -> Result<Vec<PortInternalDynamic>, ::anyhow::Error> {
+
+    let ports = match container_summary.ports.clone() {
+        Some(s) => s,
         None => return Err(anyhow!("container without port"))
     };
+
+    ports.iter().map(|p| {
+        match p.public_port {
+            None => Err(anyhow!("public port not given")),
+            Some(public_port) => Ok(PortInternalDynamic {
+                dynamic: public_port as u32,
+                internal: p.private_port as u32
+            }),
+        }
+    }).collect::<Result<Vec<PortInternalDynamic>, ::anyhow::Error>>()
 }
 
 pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Option<WorldContainer>, ::anyhow::Error> {
@@ -151,10 +162,14 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
         None => return Err(anyhow!("container without replica_id"))
     };
 
-    let container_port = match labels.get("easyharun_container_port") {
-        Some(s) => match s.parse::<u32>() {
-            Ok(k) => k,
-            Err(e) => return Err(anyhow!("invalid easyharun_container_port (not a number)"))
+    let container_ports = match labels.get("easyharun_container_ports") {
+        Some(s) => {
+            s.split(",").map(|v|{
+                match v.trim().parse::<u32>() {
+                    Ok(k) => Ok(k),
+                    Err(e) => return Err(anyhow!("invalid easyharun_container_port (not a number)"))
+                }
+            }).collect::<Result<Vec<u32>, ::anyhow::Error>>()?
         },
         None => return Err(anyhow!("container without easyharun_container_port"))
     };
@@ -169,7 +184,7 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
         None => return Err(anyhow!("container without proxies"))
     };
 
-    let container_port_dynamic_host = extract_dynamic_port_form_container(container_summary).context("could not extract container_dynamic_port_host")?;
+    let container_port_mapping = extract_dynamic_port_form_container(container_summary).context("could not extract container_dynamic_port_host")?;
 
     Ok(Some(
         WorldContainer {
@@ -177,8 +192,8 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
             name,
             image,
             replica_id,
-            container_port,
-            container_port_dynamic_host: Some(container_port_dynamic_host),
+            container_ports,
+            container_port_mapping: Some(container_port_mapping),
             health_checks,
             proxies
         }

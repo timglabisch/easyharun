@@ -33,7 +33,6 @@ impl Actor for ContainerManager {
         Some(Duration::from_millis(500))
     }
 
-    #[tracing::instrument]
     async fn on_timer(&mut self) -> Result<(), Error> {
 
         let worlds = Worlds {

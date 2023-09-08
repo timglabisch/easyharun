@@ -10,11 +10,11 @@ pub async fn build_world_from_config(config_reader : &ConfigReader) -> Result<Wo
     for config_container in config.container.iter() {
         containers.push(WorldContainer {
             container_id: None,
-            container_port_dynamic_host: None,
+            container_port_mapping: None,
             name: config_container.name.clone(),
             image: config_container.image.clone(),
             replica_id: config_container.replica_id.clone(),
-            container_port: config_container.container_port.clone(),
+            container_ports: config_container.container_ports.clone(),
             proxies: config_container.proxies.clone(),
             health_checks: config_container.health_checks.clone()
         });

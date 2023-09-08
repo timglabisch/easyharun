@@ -1,5 +1,6 @@
 use std::collections::{HashMap};
 use easyharun_lib::ContainerId;
+use crate::docker::docker_world_builder::PortInternalDynamic;
 
 
 #[derive(Debug, Clone)]
@@ -83,18 +84,18 @@ impl World {
 #[derive(Debug, Clone, Default)]
 pub struct WorldContainer {
     pub container_id: Option<ContainerId>,
-    pub container_port_dynamic_host: Option<u32>,
+    pub container_port_mapping: Option<Vec<PortInternalDynamic>>,
     pub name: String,
     pub image: String,
     pub replica_id: u32,
-    pub container_port: u32,
+    pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
     pub proxies: Vec<String>,
 }
 
 impl WorldContainer {
     pub fn get_identifier(&self) -> String {
-        format!("{}|{}|{}|{}", self.name, self.image, self.replica_id, self.container_port)
+        format!("{}|{}|{}|{}", self.name, self.image, self.replica_id, self.container_ports.iter().map(|x|x.to_string()).collect::<Vec<String>>().join(","))
     }
 }
 
@@ -109,14 +110,14 @@ mod tests {
         let worlds = Worlds {
             expected: World::new(vec![
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
             ]),
             current: World::new(vec![
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }

@@ -12,7 +12,7 @@ use easyharun_lib::config::Config;
 use easyharun_lib::portmapping::{PortMapping};
 use crate::config::config_provider::{ConfigReader};
 use crate::docker::docker_connection::docker_create_connection;
-use crate::docker::docker_world_builder::{build_world_container, docker_container_info};
+use crate::docker::docker_world_builder::{build_world_container, docker_container_info, PortInternalDynamic};
 use crate::kv_container::KV;
 
 use crate::proxy::brain::{ProxyBrain, ProxyBrainAction, ProxyBrainActionAdd, ProxyBrainActionRemove};
@@ -100,25 +100,7 @@ impl ProxyManager {
                 }
             };
 
-            let config_proxy = {
-                // todo, support multiple proxies?
-                let proxy_name = match container_world.proxies.first() {
-                    Some(s) => s,
-                    None => {
-                        continue;
-                    }
-                };
-
-                match config.proxy.iter().find(|c|&c.name == proxy_name) {
-                    Some(s) => s,
-                    None => {
-                        warn!("Could not use proxy. Container {:?} uses proxy {}, but proxy does not exist in config.", container_id, proxy_name);
-                        continue;
-                    }
-                }
-            };
-
-            let container_port_dynamic_host = match container_world.container_port_dynamic_host {
+            let port_mappings = match container_world.container_port_mapping {
                 Some(s) => s,
                 None => {
                     warn!("Container {:?} has no port_dynamic_host, should not happen. ", container_id);
@@ -126,26 +108,60 @@ impl ProxyManager {
                 }
             };
 
-            let portmapping = PortMapping {
-                listen_addr: config_proxy.listen.to_string(),
-                server_addr: format!("127.0.0.1:{}", container_port_dynamic_host),
-            };
+            for proxy_name in container_world.proxies {
 
-            match proxies.entry(portmapping.listen_addr.to_string()) {
-                Occupied(mut o) => {
-                    o.get_mut().server_addrs.insert(portmapping.server_addr.to_string());
-                },
-                Vacant(o) => {
-                    o.insert(ProxyWorldEntry {
-                        listen_addr: portmapping.listen_addr.clone(),
-                        server_addrs: {
-                            let mut s = HashSet::new();
-                            s.insert(portmapping.server_addr.clone());
-                            s
+                let config_proxy = match config.proxy.iter().find(|c|&c.name == &proxy_name) {
+                    Some(s) => s,
+                    None => {
+                        warn!("Could not use proxy. Container {:?} uses proxy {}, but proxy does not exist in config.", container_id, proxy_name);
+                        continue;
+                    }
+                };
+
+                let container_port_mapping = {
+                    let proxy_mappings = port_mappings
+                        .iter()
+                        .filter(|p| config_proxy.listen.trim().ends_with(&format!(":{}", p.dynamic)))
+                        .collect::<Vec<&PortInternalDynamic>>();
+
+                    if proxy_mappings.len() > 1 {
+                        warn!("Proxy Mapping is ambiguous");
+                        continue;
+                    }
+
+                    match proxy_mappings.first() {
+                        Some(s) => s.clone().clone(),
+                        None => {
+                            warn!("Proxy Mapping is missing");
+                            continue;
                         }
-                    });
-                },
-            };
+                    }
+                };
+
+
+                let portmapping = PortMapping {
+                    listen_addr: config_proxy.listen.to_string(),
+                    server_addr: format!("127.0.0.1:{}", container_port_mapping.internal),
+                };
+
+                match proxies.entry(portmapping.listen_addr.to_string()) {
+                    Occupied(mut o) => {
+                        o.get_mut().server_addrs.insert(portmapping.server_addr.to_string());
+                    },
+                    Vacant(o) => {
+                        o.insert(ProxyWorldEntry {
+                            listen_addr: portmapping.listen_addr.clone(),
+                            server_addrs: {
+                                let mut s = HashSet::new();
+                                s.insert(portmapping.server_addr.clone());
+                                s
+                            }
+                        });
+                    },
+                };
+
+            }
+
         }
 
         Ok(ProxyWorld {

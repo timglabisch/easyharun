@@ -27,7 +27,7 @@ pub struct ConfigFileContainer {
     pub name: String,
     pub image: String,
     pub replicas: u32,
-    pub container_port: u32,
+    pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
     pub proxies: Vec<String>,
 }
@@ -37,7 +37,7 @@ pub struct ConfigContainer {
     pub name: String,
     pub image: String,
     pub replica_id: u32,
-    pub container_port: u32,
+    pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
     pub proxies: Vec<String>,
 }
@@ -70,7 +70,7 @@ impl Config {
                         name: config_file_container.name.clone(),
                         image: config_file_container.image.clone(),
                         health_checks: config_file_container.health_checks.clone(),
-                        container_port: config_file_container.container_port
+                        container_ports: config_file_container.container_ports.clone()
                     })
                 }
             }
