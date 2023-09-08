@@ -34,7 +34,7 @@ pub struct ConfigFileContainer {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ConfigContainerProxy {
-    pub container_ports: u32,
+    pub container_port: u32,
     pub name: String,
 }
 

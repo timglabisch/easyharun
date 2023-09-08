@@ -3,3 +3,6 @@ build_test_container:
 
 run_test_container: build_test_container
 	docker run --rm --name run_test_container -e "SERVER_NAME=foo" easyharun_test_container
+
+vite_watch:
+	cd easyharun_web/frontend && make vite_watch

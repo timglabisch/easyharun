@@ -118,7 +118,7 @@ impl ProxyManager {
                     }
                 };
 
-                let dynamic_port = match port_mappings.iter().find(|x|x.internal == container_config_proxy.container_ports) {
+                let dynamic_port = match port_mappings.iter().find(|x|x.internal == container_config_proxy.container_port) {
                     Some(s) => s,
                     None => {
                         warn!("could not find dynamic proxy.");

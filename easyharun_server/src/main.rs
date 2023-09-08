@@ -10,6 +10,7 @@ mod proxy;
 mod health_check;
 mod _test_integration;
 
+use futures::future::OptionFuture;
 use structopt::StructOpt;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -40,13 +41,11 @@ pub async fn main() {
     let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
     registry_actor.register_as_default();
 
-    let registry_actor_copy_server = registry_actor.clone();
-
     let jh_config_watch = ::tokio::spawn(async move {
         ConfigMonitor::async_watch(config_writer).await
     });
 
-    let (mut jh, core) = Core::spawn(config_reader);
+    let (mut jh, core) = Core::spawn(config_reader, false);
 
     ::tokio::select! {
         _ = actor_run_grpc_server("0.0.0.0:50051", registry_actor.clone()) => {
@@ -71,8 +70,18 @@ pub struct Core {
 
 impl Core {
     pub fn spawn(
-        config_reader: ConfigReader
+        config_reader: ConfigReader,
+        debug: bool,
     ) -> (JoinHandle<()>, Core) {
+
+        let mut grpc_debug = OptionFuture::from(None);
+        if debug {
+            let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
+            registry_actor.register_as_default();
+            grpc_debug = OptionFuture::from(Some(
+                async move { actor_run_grpc_server("0.0.0.0:50051", registry_actor.clone()).await }
+            ))
+        }
 
         let kv = KV::new();
 
@@ -106,6 +115,9 @@ impl Core {
                 }
                 _ = jh_healh_check_manager => {
                     panic!("jh_healh_check_manager crash.");
+                },
+                _ = grpc_debug => {
+                    panic!("grpc_debug crash.");
                 },
                 _ = kill_moved.cancelled() => {
                     return ();

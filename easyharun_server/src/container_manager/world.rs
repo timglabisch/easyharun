@@ -137,24 +137,24 @@ mod tests {
         let worlds = Worlds {
             expected: World::new(vec![
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
             ]),
             current: World::new(vec![
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
                 WorldContainer {
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
@@ -174,13 +174,13 @@ mod tests {
             expected: World::new(vec![
                 WorldContainer {
                     name: "1".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
                 WorldContainer {
                     name: "2".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
@@ -188,7 +188,7 @@ mod tests {
             current: World::new(vec![
                 WorldContainer {
                     name: "1".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
@@ -209,7 +209,7 @@ mod tests {
             expected: World::new(vec![
                 WorldContainer {
                     name: "1".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
@@ -217,13 +217,13 @@ mod tests {
             current: World::new(vec![
                 WorldContainer {
                     name: "1".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 },
                 WorldContainer {
                     name: "2".to_string(),
-                    container_port: 80,
+                    container_ports: vec![80],
                     image: "foo:latest".to_string(),
                     ..Default::default()
                 }
