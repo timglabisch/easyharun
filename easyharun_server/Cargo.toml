@@ -11,6 +11,7 @@ tokio = {version = "1.*", features=["full"]}
 tokio-util = "0.7.*"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+tracing-core = "0.1"
 anyhow = "*"
 structopt = { version = "0.3", features = [ "default" ] }
 lazy_static = "1.*"

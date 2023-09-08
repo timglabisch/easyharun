@@ -61,6 +61,9 @@ mod integration_test {
 
         println!("status: {:?}", x.get_status(GetStatusRequest {}).await);
 
+
+        core.debug_write.clone().unwrap().dump();
+
         let a = 0;
         ::tokio::time::sleep(Duration::from_secs(1000)).await;
 

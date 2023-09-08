@@ -8,12 +8,17 @@ mod brain;
 mod kv_container;
 mod proxy;
 mod health_check;
+mod tracing;
 mod _test_integration;
 
+use std::io::{Write};
 use futures::future::OptionFuture;
 use structopt::StructOpt;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+use tracing_core::Level;
+use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::util::SubscriberInitExt;
 use easyharun_lib::config::Config;
 
 use crate::config::ConfigMonitor;
@@ -24,6 +29,7 @@ use easyact::{Actor, actor_run_grpc_server, ActorConfig, ActorRegistry, ActorSta
 use crate::config::config_provider::{ConfigProvider, ConfigReader};
 use crate::health_check::HealthCheckMsgRecv;
 use crate::kv_container::KV;
+use crate::tracing::DebugWrite;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "example", about = "An example of StructOpt usage.")]
@@ -66,7 +72,9 @@ pub struct Core {
     handle_containermanager: ActorStateHandle<()>,
     handle_healh_check_manager: ActorStateHandle<HealthCheckMsgRecv>,
     kill: CancellationToken,
+    debug_write: Option<DebugWrite>
 }
+
 
 impl Core {
     pub fn spawn(
@@ -75,8 +83,12 @@ impl Core {
     ) -> (JoinHandle<()>, Core) {
 
         let mut grpc_debug = OptionFuture::from(None);
+        let mut debug_write = None;
         if debug {
-            tracing_subscriber::fmt::init();
+            let debug_write_instance = Some(DebugWrite::new());
+            debug_write = debug_write_instance.clone();
+
+            tracing_subscriber::fmt().with_max_level(Level::TRACE).with_writer(debug_write_instance.unwrap().clone()).finish().init();
 
             let (registry_jh, registry_actor) = ActorRegistry::spawn_new();
             registry_actor.register_as_default();
@@ -129,6 +141,7 @@ impl Core {
 
         (jh, Self {
             kv,
+            debug_write,
             handle_proxymanager,
             handle_containermanager,
             handle_healh_check_manager,
