@@ -29,7 +29,13 @@ pub struct ConfigFileContainer {
     pub replicas: u32,
     pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
-    pub proxies: Vec<String>,
+    pub proxies: Vec<ConfigContainerProxy>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct ConfigContainerProxy {
+    pub container_ports: u32,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -39,7 +45,7 @@ pub struct ConfigContainer {
     pub replica_id: u32,
     pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
-    pub proxies: Vec<String>,
+    pub proxies: Vec<ConfigContainerProxy>,
 }
 
 #[derive(Clone, Debug, Default)]

@@ -9,7 +9,7 @@ name = "nginx"
 image = "nginx:latest"
 container_ports = [80]
 health_checks = ["http"]
-proxies = ["http"]
+proxies = [{name = "http", container_port = 80}]
 
 [[container]]
 replicas = 2
@@ -17,10 +17,10 @@ name = "apache"
 image = "httpd:2.4"
 container_ports = [80]
 health_checks = ["http"]
-proxies = ["http"]
+proxies = [{name = "http", container_port = 80}]
 
 [[health_check]]
 name = "http"
 check = "http"
-url = "http://127.0.0.1:{{container.port_dynamic_host}}"
+url = "http://127.0.0.1:{{container.port_dynamic_host_80}}"
 timeout_ms = 1000

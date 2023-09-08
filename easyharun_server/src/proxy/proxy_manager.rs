@@ -108,40 +108,27 @@ impl ProxyManager {
                 }
             };
 
-            for proxy_name in container_world.proxies {
+            for container_config_proxy in container_world.proxies {
 
-                let config_proxy = match config.proxy.iter().find(|c|&c.name == &proxy_name) {
+                let config_proxy = match config.proxy.iter().find(|c|&c.name == &container_config_proxy.name) {
                     Some(s) => s,
                     None => {
-                        warn!("Could not use proxy. Container {:?} uses proxy {}, but proxy does not exist in config.", container_id, proxy_name);
+                        warn!("Could not use proxy. Container {:?} uses proxy {}, but proxy does not exist in config.", container_id, container_config_proxy.name);
                         continue;
                     }
                 };
 
-                let container_port_mapping = {
-                    let proxy_mappings = port_mappings
-                        .iter()
-                        .filter(|p| config_proxy.listen.trim().ends_with(&format!(":{}", p.dynamic)))
-                        .collect::<Vec<&PortInternalDynamic>>();
-
-                    if proxy_mappings.len() > 1 {
-                        warn!("Proxy Mapping is ambiguous");
+                let dynamic_port = match port_mappings.iter().find(|x|x.internal == container_config_proxy.container_ports) {
+                    Some(s) => s,
+                    None => {
+                        warn!("could not find dynamic proxy.");
                         continue;
                     }
-
-                    match proxy_mappings.first() {
-                        Some(s) => s.clone().clone(),
-                        None => {
-                            warn!("Proxy Mapping is missing");
-                            continue;
-                        }
-                    }
                 };
-
 
                 let portmapping = PortMapping {
                     listen_addr: config_proxy.listen.to_string(),
-                    server_addr: format!("127.0.0.1:{}", container_port_mapping.internal),
+                    server_addr: format!("127.0.0.1:{}", dynamic_port.internal),
                 };
 
                 match proxies.entry(portmapping.listen_addr.to_string()) {

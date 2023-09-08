@@ -180,7 +180,7 @@ pub fn build_world_container(container_summary : &ContainerSummary) -> Result<Op
     };
 
     let proxies = match labels.get("easyharun_proxies") {
-        Some(s) => s.split(",").map(|x|x.to_string()).collect::<Vec<_>>(),
+        Some(s) => serde_json::from_str(s).context("could not parse easyharun_proxies entry")?,
         None => return Err(anyhow!("container without proxies"))
     };
 

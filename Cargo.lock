@@ -395,6 +395,8 @@ dependencies = [
  "lazy_static",
  "notify",
  "reqwest",
+ "serde",
+ "serde_json",
  "structopt",
  "tokio",
  "tokio-util",

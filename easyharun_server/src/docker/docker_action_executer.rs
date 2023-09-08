@@ -10,6 +10,7 @@ use crate::brain::brain_action::{BrainAction, ContainerStart, ContainerStop};
 use crate::docker::docker_connection::docker_create_connection;
 use crate::kv_container::KV;
 use futures::StreamExt;
+use serde_json::json;
 
 pub struct DockerActionExecuter {
     kv: KV,
@@ -69,7 +70,7 @@ impl DockerActionExecuter {
             buf.insert("easyharun_replica_id".to_string(), container.replica_id.to_string());
             buf.insert("easyharun_container_ports".to_string(), container.container_ports.iter().map(|x|x.to_string()).collect::<Vec<_>>().join(","));
             buf.insert("easyharun_health_checks".to_string(), container.health_checks.join(","));
-            buf.insert("easyharun_proxies".to_string(), container.proxies.join(","));
+            buf.insert("easyharun_proxies".to_string(), json!(container.proxies.clone()).to_string());
 
             buf
         };

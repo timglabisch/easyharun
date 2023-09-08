@@ -1,4 +1,5 @@
 use std::collections::{HashMap};
+use easyharun_lib::config::ConfigContainerProxy;
 use easyharun_lib::ContainerId;
 use crate::docker::docker_world_builder::PortInternalDynamic;
 
@@ -90,7 +91,7 @@ pub struct WorldContainer {
     pub replica_id: u32,
     pub container_ports: Vec<u32>,
     pub health_checks: Vec<String>,
-    pub proxies: Vec<String>,
+    pub proxies: Vec<ConfigContainerProxy>,
 }
 
 impl WorldContainer {
